@@ -1,0 +1,64 @@
+{% extends "dashboard/base.html" %}
+
+{% block data_view %}status{% endblock %}
+
+{% block content %}
+<section class="cards" id="summary-cards" aria-live="polite"></section>
+
+<main class="main status-grid">
+  <section class="mapwrap">
+    <div class="map-head">
+      <div>
+        <div class="ttl">State Status View</div>
+        <div class="mtr">Active signal: <b id="map-metric-label">Loading</b></div>
+      </div>
+      <div class="map-actions">
+        <button class="btn btn-lineage" type="button" data-lineage-trigger>
+          <span aria-hidden="true">🔗</span> Data sources
+        </button>
+        <div class="status-counts" id="status-counts"></div>
+      </div>
+    </div>
+
+    <div class="svg-stage">
+      <svg class="tnmap" id="tn-map" viewBox="0 0 1000 1200" role="img" aria-label="Tamil Nadu district status map"></svg>
+      <div class="tip hidden" id="map-tooltip"></div>
+      <div class="legend">
+        <div class="lg-t">Status</div>
+        <div class="row"><span class="dot green"></span>Normal</div>
+        <div class="row"><span class="dot amber"></span>Watch</div>
+        <div class="row"><span class="dot red"></span>Critical</div>
+      </div>
+    </div>
+
+    <div class="tabs map-tabs" data-tab-scope="status">
+      <button class="tab dept-tab" type="button" data-dept="police" style="--tab-c:#f5c542">
+        <span class="tab-ic">P</span><span class="tab-tx"><span class="l">Police</span><span class="s">Law & Order</span></span>
+      </button>
+      <button class="tab dept-tab" type="button" data-dept="health" style="--tab-c:#ff4fb8">
+        <span class="tab-ic">H</span><span class="tab-tx"><span class="l">Health</span><span class="s">Occupancy</span></span>
+      </button>
+      <button class="tab dept-tab" type="button" data-dept="pds" style="--tab-c:#37b6f0">
+        <span class="tab-ic">D</span><span class="tab-tx"><span class="l">PDS</span><span class="s">Distribution</span></span>
+      </button>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="panel-h">
+      <div>
+        <div class="eyebrow">Automatic Spike</div>
+        <div class="title" id="top-district-name">Loading</div>
+      </div>
+      <span class="badge red"><span class="bd"></span>Top</span>
+    </div>
+    <div class="big-metric" id="top-metric">
+      <div class="bm-k">Highest current value</div>
+      <div class="bm-v mono">--</div>
+    </div>
+
+    <div class="sec-t">Critical and watch districts</div>
+    <div class="alist" id="alert-list"></div>
+  </aside>
+</main>
+{% endblock %}

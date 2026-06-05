@@ -1,0 +1,54 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Login | Tamil Nadu Governance Grid{% endblock %}
+{% block data_view %}login{% endblock %}
+
+{% block content %}
+<main class="login-page{% if form.errors %} is-open{% endif %}">
+  <div class="login-stage">
+    <button
+      class="login-logo-trigger"
+      id="login-logo-trigger"
+      type="button"
+      aria-label="Open Flexz Governance login"
+      aria-controls="login-card"
+      aria-expanded="{% if form.errors %}true{% else %}false{% endif %}"
+    >
+      <img class="login-mark" src="{% static 'dashboard/img/flexz-governance-logo.png' %}" alt="Flexz Governance logo">
+    </button>
+
+    <section class="login-card" id="login-card"{% if not form.errors %} aria-hidden="true" inert{% endif %}>
+      <h1>Tamil Nadu Governance Grid</h1>
+      <p>Integrated Real-Time Command Centre</p>
+
+      <form method="post" class="login-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="form-error">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <label class="username-field">
+          <span>User ID</span>
+          {{ form.username }}
+          <div class="username-suggestions" id="username-role-options" role="listbox" hidden>
+            {% for role_value, role_label in form.fields.role.choices %}
+              <button type="button" role="option" data-role="{{ role_value }}" data-value="{{ role_label }}">{{ role_label }}</button>
+            {% endfor %}
+          </div>
+        </label>
+        <label>
+          <span>Password</span>
+          {{ form.password }}
+        </label>
+        <label>
+          <span>Role</span>
+          {{ form.role }}
+        </label>
+
+        <button class="btn btn-primary" type="submit">Enter dashboard</button>
+      </form>
+    </section>
+  </div>
+</main>
+{% endblock %}

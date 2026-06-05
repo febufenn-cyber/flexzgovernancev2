@@ -1,0 +1,91 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Tamil Nadu Governance Grid{% endblock %}</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'dashboard/css/app.css' %}?v=20260603-viewport-fit">
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script defer src="{% static 'dashboard/js/dashboard.js' %}?v=20260603-ai-priority-green"></script>
+</head>
+<body class="tn-root" data-view="{% block data_view %}{% endblock %}" data-dept="{{ active_dept|default:'police' }}" data-code="{{ object_code|default:'' }}">
+  {% if user.is_authenticated %}
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <img class="brand-mark" src="{% static 'dashboard/img/flexz-governance-logo.png' %}" alt="Flexz Governance logo">
+          <div>
+            <h1>Tamil Nadu Governance Grid</h1>
+            <p>Integrated Real-Time Command Centre</p>
+          </div>
+          <span class="pill">Live Demo</span>
+        </div>
+        <div class="topcenter">
+          <button class="btn btn-ai" type="button" data-insights-trigger>
+            <span class="ai-mark" aria-hidden="true">AI</span>
+            AI Insights
+          </button>
+        </div>
+        <div class="topright">
+          <div class="clock">
+            <div class="t mono" id="ist-clock">--:--:--</div>
+            <div class="d" id="ist-date">Asia/Kolkata</div>
+          </div>
+          <div class="who">
+            <div class="r">{{ role_label }}</div>
+            <div class="u">{{ user.username }}</div>
+          </div>
+          <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button class="btn btn-logout" type="submit">Sign out</button>
+          </form>
+        </div>
+      </header>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+
+  {% if user.is_authenticated %}
+      <div class="lineage-modal hidden" id="lineage-modal" role="dialog" aria-modal="true" aria-labelledby="lineage-title" aria-describedby="lineage-subtitle">
+        <section class="lineage-panel" role="document">
+          <div class="lineage-top">
+            <div>
+              <div class="eyebrow">Data Lineage</div>
+              <h2 id="lineage-title">Data Lineage</h2>
+              <p id="lineage-subtitle">where these numbers come from · live</p>
+              <p class="lineage-note hidden" id="lineage-note"></p>
+            </div>
+            <button class="lineage-close" type="button" data-lineage-close aria-label="Close data lineage">×</button>
+          </div>
+          <div class="lineage-content" id="lineage-content"></div>
+          <div class="lineage-tip hidden" id="lineage-tip"></div>
+        </section>
+      </div>
+
+      <div class="insights-modal hidden" id="insights-modal" role="dialog" aria-modal="true" aria-labelledby="insights-title" aria-describedby="insights-subtitle">
+        <section class="insights-panel" role="document">
+          <div class="insights-top">
+            <div>
+              <div class="eyebrow">AI Insights</div>
+              <h2 id="insights-title">Statewide Risk Brief</h2>
+              <p id="insights-subtitle">pattern scan across Police, Health, and PDS district feeds</p>
+            </div>
+            <button class="insights-close" type="button" data-insights-close aria-label="Close AI insights">×</button>
+          </div>
+          <div class="insights-content" id="insights-content"></div>
+        </section>
+      </div>
+
+      <footer class="foot">
+        <span>Demo dataset - figures are synthetic. Wire to live sources (CCTNS / e-Sevai / HMIS / TNPDS) to go live.</span>
+        <span class="src">Geometry: supplied 30-district Tamil Nadu SVG map</span>
+      </footer>
+    </div>
+  {% endif %}
+</body>
+</html>

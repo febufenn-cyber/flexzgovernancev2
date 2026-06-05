@@ -1,0 +1,62 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Area | Tamil Nadu Governance Grid{% endblock %}
+{% block data_view %}area{% endblock %}
+
+{% block content %}
+<section class="detail-head">
+  <div>
+    <div class="breadcrumb">
+      <a id="state-back" href="/?dept={{ active_dept }}">Tamil Nadu</a>
+      <span>/</span>
+      <a id="district-back" href="#">District</a>
+      <span>/</span>
+      <span id="crumb-name">{{ object_code }}</span>
+    </div>
+    <h2 id="detail-title">Area View</h2>
+  </div>
+  <a class="btn" id="detail-back" href="#">Back to district</a>
+</section>
+
+<div class="tabs compact-tabs" data-tab-scope="detail">
+  <button class="tab dept-tab" type="button" data-dept="police" style="--tab-c:#f5c542"><span class="tab-ic">P</span><span class="tab-tx"><span class="l">Police</span><span class="s">Law & Order</span></span></button>
+  <button class="tab dept-tab" type="button" data-dept="health" style="--tab-c:#ff4fb8"><span class="tab-ic">H</span><span class="tab-tx"><span class="l">Health</span><span class="s">Occupancy</span></span></button>
+  <button class="tab dept-tab" type="button" data-dept="pds" style="--tab-c:#37b6f0"><span class="tab-ic">D</span><span class="tab-tx"><span class="l">PDS</span><span class="s">Distribution</span></span></button>
+</div>
+
+<main class="main detail-grid">
+  <section class="panel">
+    <div class="panel-h">
+      <div>
+        <div class="eyebrow" id="active-dept-label">Department</div>
+        <div class="title" id="active-metric-label">Loading</div>
+      </div>
+      <div class="panel-actions">
+        <button class="btn btn-lineage compact" type="button" data-lineage-trigger data-lineage-note="Figures for this area are aggregated from these department sources.">
+          <span aria-hidden="true">🔗</span> Data sources
+        </button>
+        <span class="badge" id="active-status"><span class="bd"></span>Status</span>
+      </div>
+    </div>
+    <div class="big-metric" id="primary-metric">
+      <div class="bm-k">Primary metric</div>
+      <div class="bm-v mono">--</div>
+    </div>
+    <div class="tiles" id="detail-tiles"></div>
+    <div class="spark">
+      <div class="sp-h"><span>14-day trend</span><b id="trend-caption">Live signal</b></div>
+      <canvas id="trend-chart" height="148"></canvas>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="panel-h">
+      <div>
+        <div class="eyebrow">All Departments</div>
+        <div class="title">Area Strip</div>
+      </div>
+    </div>
+    <div class="dept-overview" id="dept-overview"></div>
+  </aside>
+</main>
+{% endblock %}
