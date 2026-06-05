@@ -9,13 +9,36 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'dashboard/css/app.css' %}?v=20260603-viewport-fit">
+  <link rel="stylesheet" href="{% static 'dashboard/css/app.css' %}?v=20260604-fusion14">
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-  <script defer src="{% static 'dashboard/js/dashboard.js' %}?v=20260603-ai-priority-green"></script>
+  <script defer src="{% static 'dashboard/js/dashboard.js' %}?v=20260604-fusion14"></script>
+  <script defer src="{% static 'dashboard/js/hud.js' %}?v=20260604-fusion14"></script>
+  <script defer src="{% static 'dashboard/js/fusion-center.js' %}?v=20260604-fusion14"></script>
+  <script defer src="{% static 'dashboard/js/command-palette.js' %}?v=20260604-fusion14"></script>
+  <script defer src="{% static 'dashboard/js/live.js' %}?v=20260604-fusion14"></script>
+  <!-- Grid Acquisition login intro + GSAP entrance polish (additive; dashboard map stays 2D) -->
+  <script defer src="{% static 'dashboard/vendor/gsap/gsap.min.js' %}?v=20260605-hero2"></script>
+  <script defer src="{% static 'dashboard/vendor/gsap/SplitText.min.js' %}?v=20260605-hero2"></script>
+  <script defer src="{% static 'dashboard/js/fx-anim.js' %}?v=20260605-hero2"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/static/dashboard/vendor/three/build/three.module.js",
+      "three/addons/": "/static/dashboard/vendor/three/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="{% static 'dashboard/js/login-intro.js' %}?v=20260605-hero2"></script>
 </head>
-<body class="tn-root" data-view="{% block data_view %}{% endblock %}" data-dept="{{ active_dept|default:'police' }}" data-code="{{ object_code|default:'' }}">
+<body class="tn-root" data-view="{% block data_view %}{% endblock %}" data-dept="{{ active_dept|default:'police' }}" data-code="{{ object_code|default:'' }}" data-intro="{{ show_intro|yesno:'1,0' }}">
   {% if user.is_authenticated %}
     <div class="shell">
+      <div class="fusionbar">
+        <div class="crawl" aria-label="Statewide critical alert crawl">
+          <span class="crawl-led"><span class="crawl-led-dot"></span>Live Alerts</span>
+          <div class="crawl-view"><div class="crawl-track" id="alert-crawl-track"></div></div>
+        </div>
+      </div>
       <header class="topbar">
         <div class="brand">
           <img class="brand-mark" src="{% static 'dashboard/img/flexz-governance-logo.png' %}" alt="Flexz Governance logo">
@@ -26,7 +49,12 @@
           <span class="pill">Live Demo</span>
         </div>
         <div class="topcenter">
-          <button class="btn btn-ai" type="button" data-insights-trigger>
+          <button class="btn btn-search" type="button" data-command-trigger aria-label="Open command search">
+            <span class="search-ic" aria-hidden="true">⌕</span>
+            Search the grid
+            <kbd class="search-kbd">⌘K</kbd>
+          </button>
+          <button class="btn btn-ai" type="button" data-aibrief-trigger>
             <span class="ai-mark" aria-hidden="true">AI</span>
             AI Insights
           </button>
@@ -67,18 +95,39 @@
         </section>
       </div>
 
-      <div class="insights-modal hidden" id="insights-modal" role="dialog" aria-modal="true" aria-labelledby="insights-title" aria-describedby="insights-subtitle">
-        <section class="insights-panel" role="document">
-          <div class="insights-top">
-            <div>
-              <div class="eyebrow">AI Insights</div>
-              <h2 id="insights-title">Statewide Risk Brief</h2>
-              <p id="insights-subtitle">pattern scan across Police, Health, and PDS district feeds</p>
+      <div class="aibrief hidden" id="aibrief" role="dialog" aria-modal="true" aria-labelledby="aibrief-title">
+        <section class="aibrief-panel" role="document">
+          <header class="aibrief-head">
+            <div class="aibrief-head-l">
+              <div class="eyebrow"><span class="ai-mark sm" aria-hidden="true">AI</span> Fusion Center · Live Analysis</div>
+              <h2 id="aibrief-title">AI Insights</h2>
+              <p>continuous pattern read across Police, Health &amp; PDS district feeds</p>
             </div>
-            <button class="insights-close" type="button" data-insights-close aria-label="Close AI insights">×</button>
+            <button class="aibrief-close" type="button" data-aibrief-close aria-label="Close AI insights">×</button>
+          </header>
+          <div class="aibrief-body">
+            <div class="aibrief-main" id="ai-brief">
+              <div class="brief-loading">Analysing live district signals…</div>
+            </div>
           </div>
-          <div class="insights-content" id="insights-content"></div>
         </section>
+      </div>
+
+      <div class="cmdk hidden" id="cmdk" role="dialog" aria-modal="true" aria-label="Command search">
+        <div class="cmdk-panel" role="document">
+          <div class="cmdk-input-row">
+            <span class="cmdk-prompt" aria-hidden="true">⌕</span>
+            <input class="cmdk-input" id="cmdk-input" type="text" autocomplete="off" spellcheck="false"
+              placeholder="Search districts, departments, actions…" aria-controls="cmdk-results" aria-expanded="true">
+            <kbd class="cmdk-esc">ESC</kbd>
+          </div>
+          <div class="cmdk-results" id="cmdk-results" role="listbox" aria-label="Search results"></div>
+          <div class="cmdk-foot">
+            <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+            <span><kbd>↵</kbd> open</span>
+            <span class="cmdk-brand">Fusion Center · Command</span>
+          </div>
+        </div>
       </div>
 
       <footer class="foot">

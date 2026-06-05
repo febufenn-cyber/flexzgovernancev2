@@ -6,6 +6,12 @@
 
 {% block content %}
 <main class="login-page{% if form.errors %} is-open{% endif %}">
+  <div class="login-hud" aria-hidden="true">
+    <span class="corner tl"></span>
+    <span class="corner tr"></span>
+    <span class="corner bl"></span>
+    <span class="corner br"></span>
+  </div>
   <div class="login-stage">
     <button
       class="login-logo-trigger"

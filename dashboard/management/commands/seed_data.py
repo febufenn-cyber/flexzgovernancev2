@@ -9,7 +9,7 @@ from django.db import transaction
 
 from dashboard.models import Area, AreaMetric, DataSource, District, DistrictMetric, MetricPoint
 from dashboard.roles import DEMO_PASSWORD, ROLE_CHOICES
-from dashboard.thresholds import DEPT_CONFIG, DEPT_ORDER, status_for
+from dashboard.thresholds import DEPT_CONFIG, DEPT_ORDER, rank_status
 
 
 MAJOR = {
@@ -281,6 +281,7 @@ class Command(BaseCommand):
 
             self._create_districts(rows)
             self._create_areas_and_metrics()
+            self._assign_statuses()
             self._create_district_trends()
             self._create_data_sources()
             self._ensure_users()
@@ -304,7 +305,7 @@ class Command(BaseCommand):
                     district=district,
                     department=department,
                     primary_value=payload[primary_field],
-                    status=status_for(department, payload),
+                    status="green",  # provisional; set by _assign_statuses (value-rank)
                     payload=payload,
                 )
 
@@ -325,9 +326,32 @@ class Command(BaseCommand):
                         area=area,
                         department=department,
                         primary_value=payload[primary_field],
-                        status=status_for(department, payload),
+                        status="green",  # provisional; set by _assign_statuses (value-rank)
                         payload=payload,
                     )
+
+    def _assign_statuses(self):
+        """Allocate status by value-rank within each department, so the metric's
+        magnitude alone decides Normal / Watch / Critical — identically for
+        districts and wards across Police, Health and PDS."""
+        for department in DEPT_ORDER:
+            metrics = list(
+                DistrictMetric.objects.filter(department=department)
+                .order_by("-primary_value", "district__name")
+            )
+            total = len(metrics)
+            for index, metric in enumerate(metrics):
+                metric.status = rank_status(index, total)
+            DistrictMetric.objects.bulk_update(metrics, ["status"])
+
+            area_metrics = list(
+                AreaMetric.objects.filter(department=department)
+                .order_by("-primary_value", "area__name")
+            )
+            area_total = len(area_metrics)
+            for index, metric in enumerate(area_metrics):
+                metric.status = rank_status(index, area_total)
+            AreaMetric.objects.bulk_update(area_metrics, ["status"])
 
     def _create_district_trends(self):
         top_ids = {}

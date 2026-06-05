@@ -36,6 +36,7 @@ class RoleLoginView(LoginView):
     def form_valid(self, form):
         response = super().form_valid(form)
         self.request.session["role"] = form.cleaned_data["role"]
+        self.request.session["play_intro"] = True  # grid-acquisition intro, once per login
         return response
 
 
@@ -61,7 +62,12 @@ def dashboard_context(request, **extra):
 
 @login_required
 def status_view(request):
-    return render(request, "dashboard/status_view.html", dashboard_context(request))
+    show_intro = request.session.pop("play_intro", False)  # consume: plays once after login
+    return render(
+        request,
+        "dashboard/status_view.html",
+        dashboard_context(request, show_intro=show_intro),
+    )
 
 
 @login_required

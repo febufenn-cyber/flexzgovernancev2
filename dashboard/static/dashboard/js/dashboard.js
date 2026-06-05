@@ -1,13 +1,13 @@
 const DEPARTMENT_META = {
   police: { label: "Police", sub: "Law & Order", color: "#f5c542", initial: "P" },
-  health: { label: "Health", sub: "Hospital Occupancy", color: "#ff4fb8", initial: "H" },
-  pds: { label: "PDS", sub: "Public Distribution", color: "#37b6f0", initial: "D" },
+  health: { label: "Health", sub: "Hospital Occupancy", color: "#f26da8", initial: "H" },
+  pds: { label: "PDS", sub: "Public Distribution", color: "#38bdf8", initial: "D" },
 };
 
 const STATUS_META = {
-  green: { label: "Normal", color: "#AEF359" },
-  amber: { label: "Watch", color: "#FFBF00" },
-  red: { label: "Critical", color: "#FF2C2C" },
+  green: { label: "Normal", color: "#22d39b" },
+  amber: { label: "Watch", color: "#f5b12a" },
+  red: { label: "Critical", color: "#f23a3a" },
 };
 
 let activeDept = document.body.dataset.dept || "police";
@@ -120,7 +120,7 @@ function renderBadge(status) {
 
 function lineageStatusMeta(status) {
   const meta = {
-    live: { label: "Live", color: "#37b6f0" },
+    live: { label: "Live", color: "#38bdf8" },
     delayed: { label: "Delayed", color: STATUS_META.amber.color },
     offline: { label: "Offline", color: STATUS_META.red.color },
   };
@@ -198,7 +198,7 @@ function buildHomeInsightCards(feeds) {
       label: "Statewide AI Priority",
       title: "Top 3 Attention",
       copy: `Top districts needing attention: ${formatDistrictList(insights.topFocus.map((district) => district.name))}.`,
-      color: "#AEF359",
+      color: "#22d39b",
       status: "red",
       department: insights.topFocus[0]?.department?.toLowerCase() || "police",
       code: insights.topFocus[0]?.code || "",
@@ -264,6 +264,7 @@ function renderMap(data) {
   svg.innerHTML = "";
 
   const namespace = "http://www.w3.org/2000/svg";
+  let topPath = null;
   data.districts.forEach((district) => {
     const path = document.createElementNS(namespace, "path");
     const statusMeta = STATUS_META[district.status] || STATUS_META.green;
@@ -272,7 +273,7 @@ function renderMap(data) {
     path.setAttribute("role", "button");
     path.setAttribute("aria-label", `${district.name}: ${district.display_value}, ${statusMeta.label}`);
     path.classList.add("district", `status-${district.status}`);
-    if (district.is_top) path.classList.add("is-top");
+    if (district.is_top) { path.classList.add("is-top"); topPath = path; }
     path.style.setProperty("--glow", statusMeta.color);
 
     const title = document.createElementNS(namespace, "title");
@@ -301,6 +302,33 @@ function renderMap(data) {
     });
     svg.appendChild(path);
   });
+
+  // Paint the top district last so its neon border isn't overlapped by neighbours.
+  if (topPath) svg.appendChild(topPath);
+
+  // Radar-ping beacon marking the single highest-count (top) district.
+  const topDistrict = data.districts.find((d) => d.is_top);
+  if (topDistrict && topDistrict.cx != null) {
+    const beaconColor = "#39ff6a"; // neon green — matches the top-district outline
+    const beacon = document.createElementNS(namespace, "g");
+    beacon.setAttribute("class", "map-beacon");
+    beacon.setAttribute("pointer-events", "none");
+    beacon.style.setProperty("--glow", beaconColor);
+    [
+      ["beacon-ping", 10],
+      ["beacon-ping beacon-ping-2", 10],
+      ["beacon-ring", 16],
+      ["beacon-core", 6.5],
+    ].forEach(([cls, r]) => {
+      const circle = document.createElementNS(namespace, "circle");
+      circle.setAttribute("cx", topDistrict.cx);
+      circle.setAttribute("cy", topDistrict.cy);
+      circle.setAttribute("r", r);
+      circle.setAttribute("class", cls);
+      beacon.appendChild(circle);
+    });
+    svg.appendChild(beacon);
+  }
 }
 
 function renderStatusPanel(data) {
@@ -360,6 +388,7 @@ async function loadStatus(department, options = {}) {
       ))
     );
     renderHomeInsightCards(feeds);
+    document.dispatchEvent(new CustomEvent("grid:feeds", { detail: { feeds, activeDept } }));
   }
   renderStatusCounts(data.summary.counts);
   renderMap(data);
@@ -551,8 +580,9 @@ function renderTrend(data) {
   const canvas = qs("#trend-chart");
   if (!canvas || typeof Chart === "undefined") return;
   if (detailChart) detailChart.destroy();
+  if (window.__trendLive) { clearInterval(window.__trendLive); window.__trendLive = null; }
 
-  const color = STATUS_META[data.active.status]?.color || "#37b6f0";
+  const color = STATUS_META[data.active.status]?.color || "#38bdf8";
   const labels = data.trend.map((point) => (point.day === 13 ? "Today" : `D-${13 - point.day}`));
   const values = data.trend.map((point) => point.value);
   detailChart = new Chart(canvas, {
@@ -599,6 +629,19 @@ function renderTrend(data) {
       },
     },
   });
+
+  // Live "streaming sensor" feel: gently breathe the latest point around its true value.
+  const prefersReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!prefersReduced && values.length) {
+    const liveBase = values[values.length - 1];
+    window.__trendLive = setInterval(() => {
+      if (!detailChart || document.hidden) return;
+      const arr = detailChart.data.datasets[0].data;
+      const drift = (Math.random() - 0.5) * 0.012; // ±0.6% telemetry noise, status unaffected
+      arr[arr.length - 1] = Math.max(1, Math.round(liveBase * (1 + drift)));
+      detailChart.update();
+    }, 1600);
+  }
 }
 
 function renderAreas(data) {
@@ -611,7 +654,7 @@ function renderAreas(data) {
   }
   grid.innerHTML = data.areas
     .map((area) => {
-      const glow = STATUS_META[area.status]?.color || "#37b6f0";
+      const glow = STATUS_META[area.status]?.color || "#38bdf8";
       const topClass = area.is_top ? " is-top" : "";
       return `
         <button class="area-card${topClass}" type="button" data-code="${escapeHtml(area.code)}" style="--card-glow:${glow}">
