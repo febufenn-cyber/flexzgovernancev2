@@ -48,3 +48,18 @@ Thumbs.db
 *.mov
 *.wmv
 
+# Python virtual environment
+.venv/
+venv/
+
+# Python bytecode caches
+__pycache__/
+
+# Django: local SQLite DB (regenerate via seed_data) + collected static output
+*.sqlite3
+db.sqlite3
+staticfiles/
+
+# Local tooling / editor config
+.claude/
+

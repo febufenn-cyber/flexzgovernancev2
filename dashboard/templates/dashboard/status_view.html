@@ -22,6 +22,7 @@
 
     <div class="svg-stage">
       <svg class="tnmap" id="tn-map" viewBox="0 0 1000 1200" role="img" aria-label="Tamil Nadu district status map"></svg>
+      <div class="tn-geo-map" id="tn-geo-map" role="img" aria-label="Tamil Nadu district status choropleth"></div>
       <div class="tip hidden" id="map-tooltip"></div>
       <div class="legend">
         <div class="lg-t">Status</div>
@@ -32,31 +33,39 @@
     </div>
 
     <div class="tabs map-tabs" data-tab-scope="status">
-      <button class="tab dept-tab" type="button" data-dept="police" style="--tab-c:#f5c542">
+      {% if "police" in allowed_depts %}
+      <button class="tab dept-tab{% if active_dept == 'police' %} active{% endif %}" type="button" data-dept="police" style="--tab-c:#f5c542">
         <span class="tab-ic">P</span><span class="tab-tx"><span class="l">Police</span><span class="s">Law & Order</span></span>
       </button>
-      <button class="tab dept-tab" type="button" data-dept="health" style="--tab-c:#f26da8">
+      {% endif %}
+      {% if "health" in allowed_depts %}
+      <button class="tab dept-tab{% if active_dept == 'health' %} active{% endif %}" type="button" data-dept="health" style="--tab-c:#f26da8">
         <span class="tab-ic">H</span><span class="tab-tx"><span class="l">Health</span><span class="s">Occupancy</span></span>
       </button>
-      <button class="tab dept-tab" type="button" data-dept="pds" style="--tab-c:#38bdf8">
+      {% endif %}
+      {% if "pds" in allowed_depts %}
+      <button class="tab dept-tab{% if active_dept == 'pds' %} active{% endif %}" type="button" data-dept="pds" style="--tab-c:#38bdf8">
         <span class="tab-ic">D</span><span class="tab-tx"><span class="l">PDS</span><span class="s">Distribution</span></span>
       </button>
+      {% endif %}
+      {% if allowed_depts|length > 1 %}
       <button class="tab fusion-tab" type="button" data-fusion style="--tab-c:#a78bfa">
-        <span class="tab-ic">◆</span><span class="tab-tx"><span class="l">Fusion</span><span class="s">Cross-Dept Risk</span></span>
+        <span class="tab-ic">◆</span><span class="tab-tx"><span class="l">Combined</span><span class="s">Cross-Department Risk</span></span>
       </button>
+      {% endif %}
     </div>
   </section>
 
   <aside class="panel">
     <div class="panel-h">
       <div>
-        <div class="eyebrow">Automatic Spike</div>
+        <div class="eyebrow">Priority District</div>
         <div class="title" id="top-district-name">Loading</div>
       </div>
-      <span class="badge red"><span class="bd"></span>Top</span>
+      <span class="badge red" id="top-badge"><span class="bd"></span>Priority</span>
     </div>
     <div class="big-metric" id="top-metric">
-      <div class="bm-k">Highest current value</div>
+      <div class="bm-k" id="top-metric-label">Priority signal</div>
       <div class="bm-v mono">--</div>
     </div>
 

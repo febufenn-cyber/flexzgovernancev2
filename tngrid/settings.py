@@ -13,7 +13,7 @@ def env_bool(name, default=False):
 
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-tamil-nadu-governance-grid")
-DEBUG = env_bool("DJANGO_DEBUG", True)
+DEBUG = env_bool("DJANGO_DEBUG", False)
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.environ.get(
@@ -111,6 +111,7 @@ SECURE_HSTS_PRELOAD = env_bool("DJANGO_SECURE_HSTS_PRELOAD", not DEBUG)
 LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/login/"
+
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [

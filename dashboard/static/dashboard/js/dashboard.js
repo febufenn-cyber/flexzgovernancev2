@@ -10,8 +10,20 @@ const STATUS_META = {
   red: { label: "Critical", color: "#f23a3a" },
 };
 
+// Authorization layer (client mirror): the server already clamps every API
+// call, but iterating the allowed list keeps the UI from requesting — and
+// hard-failing on — departments this role cannot read.
+const ALLOWED_DEPTS = (document.body.dataset.allowedDepts || "police,health,pds")
+  .split(",")
+  .map((d) => d.trim())
+  .filter((d) => DEPARTMENT_META[d]);
+const HOME_DISTRICT = document.body.dataset.homeDistrict || "";
+
 let activeDept = document.body.dataset.dept || "police";
-let detailChart = null;
+let detailChart = null;     // ECharts instance for the trend chart
+let mapChart = null;        // ECharts instance for the GEO choropleth
+let mapGeoRegistered = false;
+let lastMapData = null;     // cached /api/map payload for theme re-render
 let lastLineageFocus = null;
 let lastInsightsFocus = null;
 
@@ -256,7 +268,145 @@ function positionTooltip(event, tooltip) {
   tooltip.style.top = `${Math.max(12, nextY)}px`;
 }
 
+// Read live CSS tokens so charts follow the LIGHT/DARK theme. theme.js only
+// flips html[data-theme]; it dispatches no event, so we read computed styles
+// on demand and bind our own listener to #theme-toggle (see initEchartsTheme).
+function themeTokens() {
+  const cs = getComputedStyle(document.documentElement);
+  const t = (name, fallback) => (cs.getPropertyValue(name).trim() || fallback);
+  return {
+    text: t("--text", "#e6eaf2"),
+    muted: t("--muted", "#8d9aaf"),
+    line: t("--line", "rgba(125,145,180,.16)"),
+    panel: t("--panel", "rgba(18,28,50,.92)"),
+    green: t("--green", STATUS_META.green.color),
+    amber: t("--amber", STATUS_META.amber.color),
+    red: t("--red", STATUS_META.red.color),
+    gold: t("--gold", "#f2b807"),
+  };
+}
+
+function statusColor(status, tk = themeTokens()) {
+  if (status === "red") return tk.red;
+  if (status === "amber") return tk.amber;
+  return tk.green;
+}
+
+// Re-skin existing chart + map when the theme toggles (no full data refetch).
+function initEchartsTheme() {
+  const btn = qs("#theme-toggle");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    // theme.js flips data-theme synchronously on the same click; defer one frame
+    // so getComputedStyle reads the NEW theme's tokens.
+    requestAnimationFrame(() => {
+      if (detailChart && window.__trendData) renderTrend(window.__trendData);
+      if (mapChart && lastMapData) applyMapOption(lastMapData);
+    });
+  });
+  window.addEventListener("resize", () => {
+    if (detailChart) detailChart.resize();
+    if (mapChart) mapChart.resize();
+  });
+}
+
+// ECharts GEO choropleth. Paints onto the #tn-geo-map overlay div; the shared
+// #tn-map SVG stays in the DOM (fusion-center + login-intro reference it).
+function ensureGeoRegistered() {
+  if (mapGeoRegistered) return Promise.resolve(true);
+  return fetch("/static/dashboard/vendor/geo/tn_districts.geojson", { credentials: "same-origin" })
+    .then((r) => r.json())
+    .then((geojson) => {
+      echarts.registerMap("tn-districts", geojson);
+      mapGeoRegistered = true;
+      return true;
+    });
+}
+
+function applyMapOption(data) {
+  if (!mapChart) return;
+  const tk = themeTokens();
+  const seriesData = data.districts.map((d) => {
+    const isTop = !!d.is_top;
+    return {
+      name: d.code,               // nameProperty:'code' matches feature.properties.code
+      value: d.primary_value,
+      _district: d,
+      itemStyle: {
+        areaColor: statusColor(d.status, tk),
+        borderColor: isTop ? tk.gold : tk.line,
+        borderWidth: isTop ? 2.4 : 0.6,
+        shadowBlur: isTop ? 14 : 0,
+        shadowColor: isTop ? tk.gold : "transparent",
+      },
+    };
+  });
+
+  mapChart.setOption({
+    tooltip: {
+      trigger: "item",
+      backgroundColor: tk.panel,
+      borderColor: tk.line,
+      textStyle: { color: tk.text, fontFamily: "Public Sans, system-ui, sans-serif" },
+      formatter: (params) => {
+        const d = params.data && params.data._district;
+        if (!d) return "";
+        const meta = STATUS_META[d.status] || STATUS_META.green;
+        return `<div style="font-weight:600">${escapeHtml(d.name)}</div>` +
+               `<div>${escapeHtml(data.metric_label)}: <b>${escapeHtml(d.display_value)}</b></div>` +
+               `<div style="color:${meta.color}">● ${escapeHtml(meta.label)}</div>`;
+      },
+    },
+    series: [{
+      type: "map",
+      map: "tn-districts",
+      nameProperty: "code",
+      roam: false,
+      selectedMode: false,
+      label: { show: false },
+      itemStyle: { areaColor: tk.line, borderColor: tk.line, borderWidth: 0.6 },
+      emphasis: {
+        label: { show: false },
+        itemStyle: { areaColor: undefined, borderColor: tk.text, borderWidth: 1.4 },
+      },
+      data: seriesData,
+    }],
+  }, { notMerge: true });
+  mapChart.resize();
+}
+
 function renderMap(data) {
+  // Reverted to the hand-rolled SVG choropleth: it fits the map stage better,
+  // and the ECharts geo canvas overlay was sitting on top of the absolutely-
+  // positioned department tabs, intercepting their clicks (so Police/Health/
+  // PDS/Combined couldn't be switched). ECharts is retained for the trend chart
+  // only; the geo overlay stays hidden.
+  lastMapData = data;
+  showGeoOverlay(false);
+  renderMapSVG(data);
+}
+
+// Overlay visibility: fusion (Combined) + playback repaint the shared SVG and set
+// NO map-targetable class, so we manage it here — fully inside dashboard.js,
+// never editing fusion-center.js. Hidden on .fusion-tab / playback open; shown
+// on .dept-tab clicks (closePlayback() fires a .dept-tab click, restoring it).
+function showGeoOverlay(show) {
+  const host = qs("#tn-geo-map");
+  if (!host) return;
+  host.classList.toggle("geo-hidden", !show);
+  if (show && mapChart) mapChart.resize();
+}
+
+function bindMapOverlayVisibility() {
+  document.addEventListener("click", (event) => {
+    if (event.target.closest(".dept-tab")) showGeoOverlay(true);
+    if (event.target.closest(".fusion-tab") || event.target.closest("[data-playback-trigger]")) {
+      showGeoOverlay(false);
+    }
+  });
+}
+
+function renderMapSVG(data) {
   const svg = qs("#tn-map");
   const tooltip = qs("#map-tooltip");
   if (!svg) return;
@@ -274,6 +424,7 @@ function renderMap(data) {
     path.setAttribute("aria-label", `${district.name}: ${district.display_value}, ${statusMeta.label}`);
     path.classList.add("district", `status-${district.status}`);
     if (district.is_top) { path.classList.add("is-top"); topPath = path; }
+    if (HOME_DISTRICT && district.code === HOME_DISTRICT) path.classList.add("is-home");
     path.style.setProperty("--glow", statusMeta.color);
 
     const title = document.createElementNS(namespace, "title");
@@ -303,41 +454,32 @@ function renderMap(data) {
     svg.appendChild(path);
   });
 
-  // Paint the top district last so its neon border isn't overlapped by neighbours.
+  // Paint the priority district last so its accent border isn't overlapped by neighbours.
   if (topPath) svg.appendChild(topPath);
-
-  // Radar-ping beacon marking the single highest-count (top) district.
-  const topDistrict = data.districts.find((d) => d.is_top);
-  if (topDistrict && topDistrict.cx != null) {
-    const beaconColor = "#39ff6a"; // neon green — matches the top-district outline
-    const beacon = document.createElementNS(namespace, "g");
-    beacon.setAttribute("class", "map-beacon");
-    beacon.setAttribute("pointer-events", "none");
-    beacon.style.setProperty("--glow", beaconColor);
-    [
-      ["beacon-ping", 10],
-      ["beacon-ping beacon-ping-2", 10],
-      ["beacon-ring", 16],
-      ["beacon-core", 6.5],
-    ].forEach(([cls, r]) => {
-      const circle = document.createElementNS(namespace, "circle");
-      circle.setAttribute("cx", topDistrict.cx);
-      circle.setAttribute("cy", topDistrict.cy);
-      circle.setAttribute("r", r);
-      circle.setAttribute("class", cls);
-      beacon.appendChild(circle);
-    });
-    svg.appendChild(beacon);
-  }
+  // (Radar-ping beacon removed for the government build — a static accent outline marks
+  //  the priority district instead. See FLEXZ_UPGRADE.md §2.)
 }
 
 function renderStatusPanel(data) {
   const top = data.districts.find((district) => district.is_top);
   const topName = qs("#top-district-name");
   const topMetric = qs("#top-metric .bm-v");
+  const topLabel = qs("#top-metric-label");
+  const topBadge = qs("#top-badge");
   const alertList = qs("#alert-list");
   if (topName && top) topName.textContent = top.name;
-  if (topMetric && top) topMetric.textContent = top.display_value;
+  // Show the governance metric the priority is ranked on (pendency % / occupancy %
+  // / complaints per 100k), not the raw headline count.
+  if (topMetric && top) {
+    const unit = (top.status_unit || "").trim();
+    topMetric.textContent = top.status_value != null ? `${top.status_value}${unit}` : top.display_value;
+  }
+  if (topLabel && data.status_metric_label) topLabel.textContent = data.status_metric_label;
+  if (topBadge && top) {
+    const meta = STATUS_META[top.status] || STATUS_META.green;
+    topBadge.className = `badge ${top.status}`;
+    topBadge.innerHTML = `<span class="bd"></span>${meta.label}`;
+  }
   if (!alertList) return;
 
   const alerts = data.districts
@@ -382,8 +524,10 @@ async function loadStatus(department, options = {}) {
     renderSummaryCards(data.summary);
   } else {
     renderHomeInsightLoading();
+    // Only fetch departments this role is allowed to read (avoids a 403 that
+    // would reject the whole Promise.all and blank the home page for ministers).
     const feeds = await Promise.all(
-      Object.keys(DEPARTMENT_META).map((dept) => (
+      ALLOWED_DEPTS.map((dept) => (
         dept === data.department ? Promise.resolve(data) : fetchJson(`/api/map/?department=${dept}`)
       ))
     );
@@ -395,16 +539,35 @@ async function loadStatus(department, options = {}) {
   renderStatusPanel(data);
 }
 
+function fmtDelta(tile) {
+  const d = Number(tile.delta_vs_target);
+  if (!Number.isFinite(d)) return "";
+  // For "higher_worse" metrics, above target (positive delta) is bad.
+  const worse = tile.direction === "higher_worse" ? d > 0 : d < 0;
+  const sign = d > 0 ? "+" : "";
+  const cls = d === 0 ? "on-target" : worse ? "over" : "under";
+  const u = (tile.status_unit || "").trim();
+  return `<span class="tile-delta ${cls}">${sign}${d}${u} vs target</span>`;
+}
+
 function renderTiles(tiles) {
   const container = qs("#detail-tiles");
   if (!container) return;
   container.innerHTML = tiles
-    .map((tile) => `
-      <article class="tile">
-        <div class="tk">${escapeHtml(tile.key)}</div>
-        <div class="tv">${escapeHtml(tile.value)}</div>
-      </article>
-    `)
+    .map((tile) => {
+      const hasTarget = tile.target !== undefined && tile.target !== null;
+      const u = (tile.status_unit || "").trim();
+      const targetLine = hasTarget
+        ? `<div class="tile-target">Target ${escapeHtml(String(tile.target))}${escapeHtml(u)}</div>${fmtDelta(tile)}`
+        : "";
+      return `
+        <article class="tile${hasTarget ? " has-target" : ""}">
+          <div class="tk">${escapeHtml(tile.key)}</div>
+          <div class="tv">${escapeHtml(tile.value)}</div>
+          ${targetLine}
+        </article>
+      `;
+    })
     .join("");
 }
 
@@ -577,69 +740,73 @@ function renderDistrictAlerts(data) {
 }
 
 function renderTrend(data) {
-  const canvas = qs("#trend-chart");
-  if (!canvas || typeof Chart === "undefined") return;
-  if (detailChart) detailChart.destroy();
+  const elTrend = qs("#trend-chart");
+  if (!elTrend || typeof echarts === "undefined") return;
+  window.__trendData = data; // cached for theme re-render
   if (window.__trendLive) { clearInterval(window.__trendLive); window.__trendLive = null; }
 
-  const color = STATUS_META[data.active.status]?.color || "#38bdf8";
+  const tk = themeTokens();
+  const color = statusColor(data.active.status, tk);
   const labels = data.trend.map((point) => (point.day === 13 ? "Today" : `D-${13 - point.day}`));
   const values = data.trend.map((point) => point.value);
-  detailChart = new Chart(canvas, {
-    type: "line",
-    data: {
-      labels,
-      datasets: [
-        {
-          data: values,
-          borderColor: color,
-          backgroundColor: `${color}2a`,
-          borderWidth: 2,
-          fill: true,
-          tension: .38,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          displayColors: false,
-          callbacks: {
-            label: (item) => compactIndian(item.raw),
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: { color: "rgba(125,145,180,.08)" },
-          ticks: { color: "#8d9aaf", maxTicksLimit: 5 },
-        },
-        y: {
-          grid: { color: "rgba(125,145,180,.08)" },
-          ticks: {
-            color: "#8d9aaf",
-            callback: (value) => compactIndian(value),
-          },
-        },
-      },
-    },
-  });
 
-  // Live "streaming sensor" feel: gently breathe the latest point around its true value.
+  // Reuse the instance across re-renders; init once per element.
+  detailChart = echarts.getInstanceByDom(elTrend) || echarts.init(elTrend, null, { renderer: "canvas" });
+
+  detailChart.setOption({
+    animationDuration: 420,
+    grid: { left: 46, right: 14, top: 14, bottom: 26 },
+    tooltip: {
+      trigger: "axis",
+      backgroundColor: tk.panel,
+      borderColor: tk.line,
+      textStyle: { color: tk.text, fontFamily: "Public Sans, system-ui, sans-serif" },
+      formatter: (params) => {
+        const p = params[0];
+        return `${escapeHtml(p.axisValue)}<br/><b>${escapeHtml(compactIndian(p.data))}</b>`;
+      },
+    },
+    xAxis: {
+      type: "category",
+      data: labels,
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: tk.line } },
+      axisTick: { show: false },
+      axisLabel: { color: tk.muted, fontFamily: "IBM Plex Mono, monospace", interval: "auto", hideOverlap: true },
+    },
+    yAxis: {
+      type: "value",
+      splitLine: { lineStyle: { color: tk.line } },
+      axisLabel: { color: tk.muted, fontFamily: "IBM Plex Mono, monospace", formatter: (v) => compactIndian(v) },
+    },
+    series: [{
+      type: "line",
+      data: values,
+      smooth: 0.38,
+      showSymbol: false,
+      symbolSize: 8,
+      lineStyle: { color, width: 2 },
+      itemStyle: { color },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: color + "44" },
+          { offset: 1, color: color + "05" },
+        ]),
+      },
+    }],
+  }, { notMerge: true });
+  detailChart.resize();
+
+  // Live "streaming sensor" breathe on the latest point (status-neutral ±0.6%).
   const prefersReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (!prefersReduced && values.length) {
     const liveBase = values[values.length - 1];
+    const live = values.slice();
     window.__trendLive = setInterval(() => {
       if (!detailChart || document.hidden) return;
-      const arr = detailChart.data.datasets[0].data;
-      const drift = (Math.random() - 0.5) * 0.012; // ±0.6% telemetry noise, status unaffected
-      arr[arr.length - 1] = Math.max(1, Math.round(liveBase * (1 + drift)));
-      detailChart.update();
+      const drift = (Math.random() - 0.5) * 0.012;
+      live[live.length - 1] = Math.max(1, Math.round(liveBase * (1 + drift)));
+      detailChart.setOption({ series: [{ data: live }] });
     }, 1600);
   }
 }
@@ -721,15 +888,18 @@ async function loadDetail(department) {
 }
 
 function bindTabs() {
-  qsa(".dept-tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      const department = tab.dataset.dept;
-      if (document.body.dataset.view === "status") {
-        loadStatus(department, { showDepartmentCards: true }).catch(showLoadError);
-      } else {
-        loadDetail(department).catch(showLoadError);
-      }
-    });
+  // Event delegation (one listener on document) instead of per-element binding —
+  // robust to tab elements being (re)rendered or to init-order races, which was
+  // leaving the Police/Health/PDS tabs unclickable on the home page.
+  document.addEventListener("click", (event) => {
+    const tab = event.target.closest(".dept-tab");
+    if (!tab || !tab.dataset.dept) return;
+    const department = tab.dataset.dept;
+    if (document.body.dataset.view === "status") {
+      loadStatus(department, { showDepartmentCards: true }).catch(showLoadError);
+    } else {
+      loadDetail(department).catch(showLoadError);
+    }
   });
 }
 
@@ -1164,7 +1334,7 @@ async function openInsights() {
   openInsightsShell();
   setInsightsLoading();
   const feeds = await Promise.all(
-    Object.keys(DEPARTMENT_META).map((department) => fetchJson(`/api/map/?department=${department}`))
+    ALLOWED_DEPTS.map((department) => fetchJson(`/api/map/?department=${department}`))
   );
   renderInsights(feeds);
 }
@@ -1322,6 +1492,8 @@ document.addEventListener("DOMContentLoaded", () => {
   bindTabs();
   bindLineage();
   bindInsights();
+  initEchartsTheme();
+  bindMapOverlayVisibility();
   setActiveTabs(activeDept);
 
   const view = document.body.dataset.view;

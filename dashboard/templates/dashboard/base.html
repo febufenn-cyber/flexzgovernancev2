@@ -4,22 +4,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Tamil Nadu Governance Grid{% endblock %}</title>
-  <link rel="icon" href="data:,">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'dashboard/css/app.css' %}?v=20260604-fusion14">
-  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-  <script defer src="{% static 'dashboard/js/dashboard.js' %}?v=20260604-fusion14"></script>
-  <script defer src="{% static 'dashboard/js/hud.js' %}?v=20260604-fusion14"></script>
-  <script defer src="{% static 'dashboard/js/fusion-center.js' %}?v=20260604-fusion14"></script>
-  <script defer src="{% static 'dashboard/js/command-palette.js' %}?v=20260604-fusion14"></script>
-  <script defer src="{% static 'dashboard/js/live.js' %}?v=20260604-fusion14"></script>
-  <!-- Grid Acquisition login intro + GSAP entrance polish (additive; dashboard map stays 2D) -->
-  <script defer src="{% static 'dashboard/vendor/gsap/gsap.min.js' %}?v=20260605-hero2"></script>
-  <script defer src="{% static 'dashboard/vendor/gsap/SplitText.min.js' %}?v=20260605-hero2"></script>
-  <script defer src="{% static 'dashboard/js/fx-anim.js' %}?v=20260605-hero2"></script>
+  <script>
+    /* Set background theme before paint to avoid a flash. Default = vault grey.
+       Only the page background changes between "grey" and "dark"; all other
+       colours (map, status, accents) stay the same. */
+    (function () {
+      try {
+        var t = localStorage.getItem("flexz-theme");
+        document.documentElement.dataset.theme = (t === "silver") ? "silver" : "dark";
+      } catch (e) {
+        document.documentElement.dataset.theme = "dark";
+      }
+    })();
+  </script>
+  <title>{% block title %}Flexz Governance — Tamil Nadu Governance Grid{% endblock %}</title>
+  <link rel="icon" type="image/png" href="{% static 'dashboard/img/flexz-mark.png' %}?v=20260608-gov1">
+  {# Fonts are fully self-hosted (Public Sans + Archivo + IBM Plex Mono via @font-face in #}
+  {# app.css) — no Google Fonts CDN, so the dashboard works fully offline / air-gapped. #}
+  <link rel="stylesheet" href="{% static 'dashboard/css/app.css' %}?v=20260609-flexzai">
+  <script defer src="{% static 'dashboard/vendor/echarts/echarts.min.js' %}?v=20260608-gov1"></script>
+  <script defer src="{% static 'dashboard/js/dashboard.js' %}?v=20260608-fix4"></script>
+  <script defer src="{% static 'dashboard/js/fusion-center.js' %}?v=20260608-fix2"></script>
+  <script defer src="{% static 'dashboard/js/command-palette.js' %}?v=20260608-gov1"></script>
+  <script defer src="{% static 'dashboard/js/live.js' %}?v=20260608-gov1"></script>
+  <script defer src="{% static 'dashboard/js/theme.js' %}?v=20260609-silver2"></script>
+  {# "Grid Acquisition" globe login intro — restored at user request. Plays once after #}
+  {# login (server-gated via body[data-intro]). The number-scramble (hud.js) and bouncy #}
+  {# GSAP entrance (fx-anim.js) stay removed; only the globe + GSAP timeline it needs. #}
+  <script defer src="{% static 'dashboard/vendor/gsap/gsap.min.js' %}?v=20260608-gov1"></script>
   <script type="importmap">
   {
     "imports": {
@@ -28,9 +40,9 @@
     }
   }
   </script>
-  <script type="module" src="{% static 'dashboard/js/login-intro.js' %}?v=20260605-hero2"></script>
+  <script type="module" src="{% static 'dashboard/js/login-intro.js' %}?v=20260608-gov1"></script>
 </head>
-<body class="tn-root" data-view="{% block data_view %}{% endblock %}" data-dept="{{ active_dept|default:'police' }}" data-code="{{ object_code|default:'' }}" data-intro="{{ show_intro|yesno:'1,0' }}">
+<body class="tn-root" data-view="{% block data_view %}{% endblock %}" data-dept="{{ active_dept|default:'police' }}" data-code="{{ object_code|default:'' }}" data-allowed-depts="{{ allowed_depts_attr|default:'police,health,pds' }}" data-home-district="{{ home_district }}" data-intro="{{ show_intro|yesno:'1,0' }}">
   {% if user.is_authenticated %}
     <div class="shell">
       <div class="fusionbar">
@@ -41,10 +53,10 @@
       </div>
       <header class="topbar">
         <div class="brand">
-          <img class="brand-mark" src="{% static 'dashboard/img/flexz-governance-logo.png' %}" alt="Flexz Governance logo">
+          <img class="brand-mark" src="{% static 'dashboard/img/flexz-mark.png' %}?v=20260608-gov1" alt="Flexz Governance logo">
           <div>
-            <h1>Tamil Nadu Governance Grid</h1>
-            <p>Integrated Real-Time Command Centre</p>
+            <h1>Flexz Governance</h1>
+            <p>Tamil Nadu Governance Grid · Integrated Command Centre</p>
           </div>
           <span class="pill">Live Demo</span>
         </div>
@@ -60,6 +72,10 @@
           </button>
         </div>
         <div class="topright">
+          <button class="btn btn-theme" type="button" id="theme-toggle" aria-pressed="false" aria-label="Switch to silver background" title="Silver background">
+            <span class="theme-ic" aria-hidden="true">&#x25D1;</span>
+            <span class="theme-lbl">Silver</span>
+          </button>
           <div class="clock">
             <div class="t mono" id="ist-clock">--:--:--</div>
             <div class="d" id="ist-date">Asia/Kolkata</div>
@@ -99,7 +115,7 @@
         <section class="aibrief-panel" role="document">
           <header class="aibrief-head">
             <div class="aibrief-head-l">
-              <div class="eyebrow"><span class="ai-mark sm" aria-hidden="true">AI</span> Fusion Center · Live Analysis</div>
+              <div class="eyebrow"><span class="ai-mark sm" aria-hidden="true">AI</span> Integrated Analysis · Live</div>
               <h2 id="aibrief-title">AI Insights</h2>
               <p>continuous pattern read across Police, Health &amp; PDS district feeds</p>
             </div>
@@ -125,7 +141,7 @@
           <div class="cmdk-foot">
             <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
             <span><kbd>↵</kbd> open</span>
-            <span class="cmdk-brand">Fusion Center · Command</span>
+            <span class="cmdk-brand">State Command Centre</span>
           </div>
         </div>
       </div>

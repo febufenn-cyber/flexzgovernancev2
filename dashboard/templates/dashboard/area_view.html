@@ -19,9 +19,9 @@
 </section>
 
 <div class="tabs compact-tabs" data-tab-scope="detail">
-  <button class="tab dept-tab" type="button" data-dept="police" style="--tab-c:#f5c542"><span class="tab-ic">P</span><span class="tab-tx"><span class="l">Police</span><span class="s">Law & Order</span></span></button>
-  <button class="tab dept-tab" type="button" data-dept="health" style="--tab-c:#f26da8"><span class="tab-ic">H</span><span class="tab-tx"><span class="l">Health</span><span class="s">Occupancy</span></span></button>
-  <button class="tab dept-tab" type="button" data-dept="pds" style="--tab-c:#38bdf8"><span class="tab-ic">D</span><span class="tab-tx"><span class="l">PDS</span><span class="s">Distribution</span></span></button>
+  {% if "police" in allowed_depts %}<button class="tab dept-tab{% if active_dept == 'police' %} active{% endif %}" type="button" data-dept="police" style="--tab-c:#f5c542"><span class="tab-ic">P</span><span class="tab-tx"><span class="l">Police</span><span class="s">Law & Order</span></span></button>{% endif %}
+  {% if "health" in allowed_depts %}<button class="tab dept-tab{% if active_dept == 'health' %} active{% endif %}" type="button" data-dept="health" style="--tab-c:#f26da8"><span class="tab-ic">H</span><span class="tab-tx"><span class="l">Health</span><span class="s">Occupancy</span></span></button>{% endif %}
+  {% if "pds" in allowed_depts %}<button class="tab dept-tab{% if active_dept == 'pds' %} active{% endif %}" type="button" data-dept="pds" style="--tab-c:#38bdf8"><span class="tab-ic">D</span><span class="tab-tx"><span class="l">PDS</span><span class="s">Distribution</span></span></button>{% endif %}
 </div>
 
 <main class="main detail-grid">
@@ -45,7 +45,7 @@
     <div class="tiles" id="detail-tiles"></div>
     <div class="spark">
       <div class="sp-h"><span>14-day trend</span><b id="trend-caption">Live signal</b></div>
-      <canvas id="trend-chart" height="148"></canvas>
+      <div id="trend-chart" class="trend-chart"></div>
     </div>
   </section>
 

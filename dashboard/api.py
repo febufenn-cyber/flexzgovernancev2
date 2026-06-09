@@ -3,12 +3,14 @@ import random
 
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Area, AreaMetric, DataSource, District, DistrictMetric, MetricPoint
-from .thresholds import DEPT_CONFIG, DEPT_ORDER, normalize_department
+from .roles import allowed_departments, clamp_department
+from .thresholds import DEPT_CONFIG, DEPT_ORDER, DEPT_THRESHOLDS, band_info, normalize_department
 
 
 VIEW_BOX = "0 0 1000 1200"
@@ -69,24 +71,54 @@ def tile_value(value, unit=""):
     return str(value)
 
 
+def metric_band(metric, as_of):
+    """Target/RAG telemetry for one metric, derived from the same band_info()
+    that seed_data used to set .status — so they can never disagree."""
+    info = band_info(metric.department, metric.payload)
+    return {
+        "target": info["target"],
+        "status_value": info["status_value"],
+        "delta_vs_target": info["delta_vs_target"],
+        "direction": info["direction"],
+        "status_unit": info["status_unit"],
+        "as_of": as_of,
+    }
+
+
+def _band_tile(department, payload, key, value, unit=""):
+    """A tile that carries target/delta when its key is the dept's status metric."""
+    tile = {"key": key, "value": tile_value(value, unit)}
+    spec = DEPT_THRESHOLDS[department]
+    if key == spec["tile_key"]:
+        info = band_info(department, payload)
+        tile["target"] = info["target"]
+        tile["delta_vs_target"] = info["delta_vs_target"]
+        tile["direction"] = info["direction"]
+        tile["status_unit"] = info["status_unit"]
+        tile["status"] = info["status"]
+    return tile
+
+
 def metric_tiles(department, payload):
     if department == "police":
         return [
             {"key": "FIRs Filed", "value": tile_value(payload["fir_filed"])},
             {"key": "FIR Pending", "value": tile_value(payload["fir_pending"])},
             {"key": "Disposed", "value": tile_value(payload["disposed"])},
-            {"key": "Pendency", "value": tile_value(payload["pendency_pct"], "%")},
+            _band_tile(department, payload, "Pendency", payload["pendency_pct"], "%"),
         ]
     if department == "health":
         return [
-            {"key": "Bed Occupancy", "value": tile_value(payload["occupancy"], "%")},
+            _band_tile(department, payload, "Bed Occupancy", payload["occupancy"], "%"),
             {"key": "Sanctioned Beds", "value": tile_value(payload["beds"])},
             {"key": "Beds Occupied", "value": tile_value(payload["occupied"])},
             {"key": "Beds Vacant", "value": tile_value(payload["vacant"])},
         ]
     if department == "pds":
+        rate = payload.get("complaint_rate", 0)
         return [
             {"key": "Complaints Raised (MTD)", "value": tile_value(payload["complaints"])},
+            _band_tile(department, payload, "Complaints / 100k Users", rate),
             {"key": "Ration Users", "value": tile_value(payload["ration_users"])},
             {"key": "Ration Shops", "value": tile_value(payload["ration_shops"])},
             {"key": "Complaint Surge", "value": tile_value(payload["complaint_surge"])},
@@ -94,29 +126,46 @@ def metric_tiles(department, payload):
     return []
 
 
+# Priority / "top" is the WORST unit by governance severity (status red>amber>green,
+# then furthest past target) — NOT the highest raw count. Ranking by raw
+# primary_value would headline the district with the most FIRs filed as the top
+# concern, i.e. the backwards "more filings = worse" logic we deliberately removed.
+SEVERITY_RANK = {"red": 0, "amber": 1, "green": 2}
+
+
+def _severity_sort_key(metric, name):
+    info = band_info(metric.department, metric.payload)
+    delta = info["delta_vs_target"]
+    # higher_worse: larger positive delta = worse; higher_better: smaller = worse.
+    worse_first = -delta if info["direction"] == "higher_worse" else delta
+    return (SEVERITY_RANK.get(info["status"], 3), worse_first, name)
+
+
 def top_district_code(department):
-    metric = (
-        DistrictMetric.objects.select_related("district")
-        .filter(department=department)
-        .order_by("-primary_value", "district__name")
-        .first()
+    metrics = list(
+        DistrictMetric.objects.select_related("district").filter(department=department)
     )
-    return metric.district.code if metric else None
+    if not metrics:
+        return None
+    metrics.sort(key=lambda m: _severity_sort_key(m, m.district.name))
+    return metrics[0].district.code
 
 
 def top_area_code(district, department):
-    metric = (
-        AreaMetric.objects.select_related("area")
-        .filter(area__district=district, department=department)
-        .order_by("-primary_value", "area__name")
-        .first()
+    metrics = list(
+        AreaMetric.objects.select_related("area").filter(
+            area__district=district, department=department
+        )
     )
-    return metric.area.code if metric else None
+    if not metrics:
+        return None
+    metrics.sort(key=lambda m: _severity_sort_key(m, m.area.name))
+    return metrics[0].area.code
 
 
-def serialize_department_metric(metric):
+def serialize_department_metric(metric, as_of):
     config = DEPT_CONFIG[metric.department]
-    return {
+    payload = {
         "id": metric.department,
         "label": config["label"],
         "metric_label": config["metric_label"],
@@ -125,6 +174,8 @@ def serialize_department_metric(metric):
         "display_value": metric_value(metric),
         "status": metric.status,
     }
+    payload.update(metric_band(metric, as_of))
+    return payload
 
 
 def serialize_data_source(source):
@@ -159,11 +210,13 @@ def district_summary(department):
         avg_occ = round(sum(m.payload["occupancy"] for m in metrics) / max(metrics.count(), 1))
         beds = sum(m.payload["beds"] for m in metrics)
         occupied = sum(m.payload["occupied"] for m in metrics)
+        h = DEPT_THRESHOLDS["health"]
         cards = [
-            {"key": "Avg Bed Occupancy", "value": avg_occ, "unit": "%", "tone": "amber" if avg_occ >= 75 else "green"},
+            {"key": "Avg Bed Occupancy", "value": avg_occ, "unit": "%",
+             "tone": "amber" if avg_occ >= h["target"] else "green"},
             {"key": "Sanctioned Beds", "value": compact_number(beds), "unit": "", "tone": None},
             {"key": "Beds Occupied", "value": compact_number(occupied), "unit": "", "tone": None},
-            {"key": "Critical (>=90%)", "value": counts["red"], "unit": "", "tone": "red"},
+            {"key": f"Critical (>={h['red']}%)", "value": counts["red"], "unit": "", "tone": "red"},
         ]
     else:
         complaints = sum(m.payload["complaints"] for m in metrics)
@@ -204,25 +257,34 @@ def derived_area_trend(area, metric, is_top):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def map_api(request):
-    department = normalize_department(request.GET.get("department", "police"))
+    department = clamp_department(request, request.GET.get("department"))  # authorization layer
+    if department is None:  # role has no department access -> fail closed (never fall open)
+        return Response({"detail": "Your role has no department access."}, status=403)
     config = DEPT_CONFIG[department]
     top_code = top_district_code(department)
     metrics = DistrictMetric.objects.select_related("district").filter(department=department)
-    districts = [
-        {
-            "code": metric.district.code,
-            "name": metric.district.name,
-            "svg_path": metric.district.svg_path,
-            "cx": metric.district.cx,
-            "cy": metric.district.cy,
-            "primary_value": metric.primary_value,
-            "display_value": metric_value(metric),
-            "status": metric.status,
-            "is_top": metric.district.code == top_code,
-            "payload": metric.payload,
-        }
-        for metric in metrics.order_by("district__name")
-    ]
+    districts = []
+    for metric in metrics.order_by("district__name"):
+        band = band_info(metric.department, metric.payload)
+        districts.append(
+            {
+                "code": metric.district.code,
+                "name": metric.district.name,
+                "svg_path": metric.district.svg_path,
+                "cx": metric.district.cx,
+                "cy": metric.district.cy,
+                "primary_value": metric.primary_value,
+                "display_value": metric_value(metric),
+                "status": metric.status,
+                "is_top": metric.district.code == top_code,
+                # Governance metric the RAG is scored on (pendency % / occupancy %
+                # / complaints per 100k) — so the priority panel headlines the real
+                # signal, not the raw headline count.
+                "status_value": band["status_value"],
+                "status_unit": band["status_unit"],
+                "payload": metric.payload,
+            }
+        )
     return Response(
         {
             "department": department,
@@ -230,6 +292,7 @@ def map_api(request):
             "unit": config["unit"],
             "view_box": VIEW_BOX,
             "top_district": top_code,
+            "status_metric_label": DEPT_THRESHOLDS[department]["tile_key"],
             "summary": district_summary(department),
             "districts": districts,
         }
@@ -239,7 +302,9 @@ def map_api(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def lineage_api(request):
-    department = normalize_department(request.GET.get("department", "police"))
+    department = clamp_department(request, request.GET.get("department"))  # authorization layer
+    if department is None:  # role has no department access -> fail closed (never fall open)
+        return Response({"detail": "Your role has no department access."}, status=403)
     nodes = list(DataSource.objects.filter(department=department).order_by("sort_order", "name"))
     sources = [node for node in nodes if node.layer == "source"]
     ingestion = next((node for node in nodes if node.layer == "ingestion"), None)
@@ -274,7 +339,11 @@ def lineage_api(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def district_api(request, code):
-    department = normalize_department(request.GET.get("department", "police"))
+    department = clamp_department(request, request.GET.get("department"))  # authorization layer
+    if department is None:  # role has no department access -> fail closed (never fall open)
+        return Response({"detail": "Your role has no department access."}, status=403)
+    allowed = allowed_departments(request)  # authorization layer: scope departments
+    as_of = timezone.now().isoformat()
     district = get_object_or_404(District, code=code)
     metrics = {
         metric.department: metric
@@ -305,9 +374,9 @@ def district_api(request, code):
             "name": district.name,
             "department": department,
             "all_departments": [
-                serialize_department_metric(metrics[dept])
+                serialize_department_metric(metrics[dept], as_of)
                 for dept in DEPT_ORDER
-                if dept in metrics
+                if dept in metrics and dept in allowed
             ],
             "active": {
                 "metric_label": DEPT_CONFIG[department]["metric_label"],
@@ -315,6 +384,7 @@ def district_api(request, code):
                 "value": active.primary_value,
                 "display_value": metric_value(active),
                 "status": active.status,
+                **metric_band(active, as_of),
                 "tiles": metric_tiles(department, active.payload),
             },
             "trend": district_trend(district, department),
@@ -327,7 +397,11 @@ def district_api(request, code):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def area_api(request, code):
-    department = normalize_department(request.GET.get("department", "police"))
+    department = clamp_department(request, request.GET.get("department"))  # authorization layer
+    if department is None:  # role has no department access -> fail closed (never fall open)
+        return Response({"detail": "Your role has no department access."}, status=403)
+    allowed = allowed_departments(request)  # authorization layer: scope departments
+    as_of = timezone.now().isoformat()
     area = get_object_or_404(Area.objects.select_related("district"), code=code)
     metrics = {metric.department: metric for metric in AreaMetric.objects.filter(area=area)}
     active = metrics[department]
@@ -340,9 +414,9 @@ def area_api(request, code):
             "department": department,
             "district": {"code": area.district.code, "name": area.district.name},
             "all_departments": [
-                serialize_department_metric(metrics[dept])
+                serialize_department_metric(metrics[dept], as_of)
                 for dept in DEPT_ORDER
-                if dept in metrics
+                if dept in metrics and dept in allowed
             ],
             "active": {
                 "metric_label": DEPT_CONFIG[department]["metric_label"],
@@ -350,6 +424,7 @@ def area_api(request, code):
                 "value": active.primary_value,
                 "display_value": metric_value(active),
                 "status": active.status,
+                **metric_band(active, as_of),
                 "tiles": metric_tiles(department, active.payload),
             },
             "trend": derived_area_trend(area, active, is_top_area),

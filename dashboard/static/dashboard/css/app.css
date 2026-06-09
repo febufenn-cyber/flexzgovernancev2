@@ -1,17 +1,26 @@
 :root {
-  --bg: #070b14;
-  --bg-2: #0b1220;
-  --panel: rgba(15, 22, 38, .72);
-  --panel-2: rgba(19, 29, 48, .58);
-  --line: rgba(125, 145, 180, .18);
-  --line-2: rgba(125, 145, 180, .32);
-  --text: #e7eef8;
-  --muted: #8d9aaf;
-  --faint: #637188;
-  --green: #22d39b;
-  --amber: #f5b12a;
-  --red: #f23a3a;
-  --cyan: #38bdf8;
+  /* Institutional command-centre palette (de-neoned). A light institutional theme
+     + toggle lands in the next iteration; see FLEXZ_UPGRADE.md. */
+  --bg: #121417;
+  --bg-2: #0f1830;
+  --panel: rgba(36, 39, 44, .90);
+  --panel-2: rgba(44, 48, 53, .82);
+  --line: rgba(125, 145, 180, .16);
+  --line-2: rgba(125, 145, 180, .28);
+  --text: #e6eaf2;
+  --muted: #9aa6b8;
+  --faint: #66738a;
+  /* Functional status — desaturated, accessible, kept distinct from the brand red */
+  --green: #2fb37f;
+  --amber: #e0a32a;
+  --red: #e2483f;
+  /* Accent: was neon cyan -> calm institutional steel-blue (legacy token name kept) */
+  --cyan: #5b8fc7;
+  --accent: #5b8fc7;
+  /* TVK brand accents — used sparingly over the institutional base, never as party wash */
+  --brand: #c8102e;   /* TVK red */
+  --brand-2: #9e1b1b; /* TVK maroon */
+  --gold: #f2b807;    /* TVK gold (secondary highlight) */
 }
 
 * {
@@ -27,12 +36,8 @@ body.tn-root {
   min-height: 100vh;
   margin: 0;
   color: var(--text);
-  font-family: "IBM Plex Sans", system-ui, sans-serif;
-  background:
-    linear-gradient(rgba(125, 145, 180, .045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(125, 145, 180, .045) 1px, transparent 1px),
-    linear-gradient(180deg, #070b14 0%, #080e19 56%, #05080f 100%);
-  background-size: 44px 44px, 44px 44px, auto;
+  font-family: var(--font-sans);
+  background: linear-gradient(180deg, #16191d 0%, #121417 60%, #0d0f12 100%);
   overflow-x: hidden;
 }
 
@@ -243,7 +248,7 @@ select {
 
 .card {
   min-height: 116px;
-  padding: 16px 18px;
+  padding: var(--space-2) var(--space-2);
   border-radius: 15px;
 }
 
@@ -270,7 +275,7 @@ select {
 .card .v {
   margin-top: 10px;
   font-family: "IBM Plex Mono", monospace;
-  font-size: 30px;
+  font-size: var(--type-kpi-md);
   font-weight: 600;
   line-height: 1;
 }
@@ -590,7 +595,7 @@ button.card {
   padding: 11px 13px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: rgba(8, 12, 22, .78);
+  background: rgba(22, 24, 28, .82);
 }
 
 .legend .row {
@@ -710,13 +715,13 @@ button.card {
 
 .panel {
   min-height: 420px;
-  padding: 18px;
+  padding: var(--space-3);
   border-radius: 18px;
 }
 
 .panel .title {
   margin-top: 4px;
-  font-size: 22px;
+  font-size: var(--type-title);
   font-weight: 700;
 }
 
@@ -764,7 +769,7 @@ button.card {
 
 .big-metric {
   margin-top: 16px;
-  padding: 16px;
+  padding: var(--space-2);
   border: 1px solid var(--line);
   border-radius: 14px;
   background: linear-gradient(150deg, rgba(255, 255, 255, .035), transparent);
@@ -778,7 +783,7 @@ button.card {
 
 .bm-v {
   margin-top: 7px;
-  font-size: 42px;
+  font-size: var(--type-kpi-lg);
   font-weight: 600;
   line-height: 1;
   overflow-wrap: anywhere;
@@ -808,10 +813,34 @@ button.card {
 .tile .tv {
   margin-top: 7px;
   font-family: "IBM Plex Mono", monospace;
-  font-size: 19px;
+  font-size: var(--type-kpi-sm);
   font-weight: 600;
   overflow-wrap: anywhere;
 }
+
+.tile.has-target {
+  display: flex;
+  flex-direction: column;
+}
+
+.tile .tile-target {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 10.5px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.tile .tile-delta {
+  margin-top: 3px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tile .tile-delta.over { color: var(--red); }
+.tile .tile-delta.under { color: var(--green); }
+.tile .tile-delta.on-target { color: var(--muted); }
 
 .sec-t {
   display: flex;
@@ -1803,8 +1832,8 @@ body.insights-open {
   z-index: 2;
   top: 50%;
   left: 50%;
-  width: min(360px, 74vw);
-  aspect-ratio: 1;
+  width: min(540px, 86vw);
+  aspect-ratio: 23 / 10;
   padding: 0;
   border: 0;
   border-radius: 28px;
@@ -1829,7 +1858,7 @@ body.insights-open {
 
 .login-page.is-open .login-logo-trigger {
   left: calc((100% - 494px) / 2);
-  width: min(390px, 38vw);
+  width: min(400px, 40vw);
   transform: translate(-50%, -50%) scale(.96);
   cursor: default;
   transition:
@@ -1845,8 +1874,8 @@ body.insights-open {
   width: 100%;
   height: 100%;
   margin: 0;
-  border-radius: 18px;
-  box-shadow: 0 0 38px -22px rgba(55, 182, 240, .95);
+  border-radius: 0;
+  box-shadow: none;
   object-fit: contain;
   user-select: none;
 }
@@ -1855,10 +1884,9 @@ body.insights-open {
   body.tn-root[data-view="status"],
   body.tn-root[data-view="district"],
   body.tn-root[data-view="area"] {
+    /* Fit to one screen, no scroll (Grafana now lives in a popup, not inline). */
     height: 100vh;
     height: 100dvh;
-    min-height: 100vh;
-    min-height: 100dvh;
     overflow: hidden;
   }
 
@@ -1866,12 +1894,13 @@ body.insights-open {
   body[data-view="district"] .shell,
   body[data-view="area"] .shell {
     display: flex;
-    width: min(1480px, calc(100% - 24px));
+    /* Full-width: fill the screen edge-to-edge, no big side gutters. */
+    width: 100%;
+    max-width: none;
     height: 100vh;
     height: 100dvh;
-    min-height: 0;
     flex-direction: column;
-    padding: 10px 0 8px;
+    padding: 8px 14px;
     overflow: hidden;
   }
 
@@ -2329,13 +2358,13 @@ body.insights-open {
   }
 
   .login-logo-trigger {
-    width: min(300px, 78vw);
+    width: min(420px, 88vw);
   }
 
   .login-page.is-open .login-logo-trigger {
-    top: 19%;
+    top: 16%;
     left: 50%;
-    width: min(210px, 54vw);
+    width: min(300px, 74vw);
     transform: translate(-50%, -50%) scale(.96);
   }
 
@@ -2475,31 +2504,53 @@ body.insights-open {
    ============================================================ */
 
 :root {
-  --bg: #05070f;
-  --bg-2: #070b16;
-  --text: #e9f0fb;
-  --muted: #94a2bb;
-  --faint: #61708a;
+  /* Authoritative token layer (this block wins over the first :root for shared keys).
+     Institutional command-centre palette, de-neoned, with restrained TVK accents. */
+  --bg: #121417;
+  --bg-2: #0f1830;
+  --text: #e6eaf2;
+  --muted: #9aa6b8;
+  --faint: #66738a;
   --line: rgba(132, 152, 192, .14);
   --line-2: rgba(132, 152, 192, .26);
-  --green: #22d39b;
-  --amber: #f5b12a;
-  --red: #f23a3a;
-  --cyan: #38bdf8;
-  --brand: #46c8f5;
-  --glass: rgba(19, 27, 46, .60);
-  --glass-2: rgba(11, 17, 31, .54);
-  --shadow-1: 0 1px 0 rgba(255, 255, 255, .045) inset, 0 20px 56px -34px rgba(0, 0, 0, .92);
-  --shadow-2: 0 36px 110px -46px rgba(0, 0, 0, .96);
+  /* Functional status — desaturated, accessible, distinct from the brand red */
+  --green: #2fb37f;
+  --amber: #e0a32a;
+  --red: #e2483f;
+  /* Accent: institutional steel-blue (legacy token name kept) */
+  --cyan: #5b8fc7;
+  --accent: #5b8fc7;
+  /* TVK brand accents — used sparingly, never as a party-colour wash */
+  --brand: #c8102e;   /* TVK red */
+  --brand-2: #9e1b1b; /* TVK maroon */
+  --gold: #f2b807;    /* TVK gold (secondary highlight) */
+  /* Surfaces: more solid (less glassmorphism), calmer shadows */
+  --glass: rgba(38, 41, 46, .92);
+  --glass-2: rgba(30, 33, 37, .88);
+  --shadow-1: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 18px 50px -34px rgba(0, 0, 0, .85);
+  --shadow-2: 0 30px 90px -46px rgba(0, 0, 0, .9);
+  /* ---- USWDS-derived design tokens (theme-invariant; both themes inherit) ----
+     Public Sans self-hosted (SIL OFL-1.1; see vendor/fonts/public-sans/OFL.txt).
+     Latin-only face → system-ui/sans-serif fallback covers any non-latin glyph,
+     same as the IBM Plex Sans it replaces (no script regression). */
+  --font-sans: "Public Sans", system-ui, sans-serif;
+  /* USWDS 8px-base spacing scale */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
+  --space-6: 48px;
+  /* Modular type scale (KPI numerals + section titles) */
+  --type-kpi-lg: 40px;  /* hero metric  (.bm-v base) */
+  --type-kpi-md: 32px;  /* card value   (.card .v)   */
+  --type-kpi-sm: 20px;  /* tile value   (.tile .tv)  */
+  --type-title:  24px;  /* panel title  (.panel .title) */
 }
 
-/* --- Cinematic canvas: aurora bloom + grid + grain + vignette --- */
+/* --- Institutional canvas: clean navy, no neon aurora / grid / film-grain --- */
 body.tn-root {
-  background:
-    radial-gradient(1200px 760px at 80% -10%, rgba(56, 189, 248, .12), transparent 58%),
-    radial-gradient(1080px 880px at 4% 112%, rgba(79, 70, 229, .12), transparent 60%),
-    radial-gradient(900px 700px at 96% 108%, rgba(244, 63, 94, .055), transparent 60%),
-    linear-gradient(180deg, #05070f 0%, #070b16 58%, #04060d 100%);
+  background: linear-gradient(180deg, #16191d 0%, #121417 60%, #0d0f12 100%);
   background-attachment: fixed;
 }
 
@@ -2512,18 +2563,13 @@ body.tn-root::after {
   pointer-events: none;
 }
 
+/* Soft vignette only — keeps depth without the grid/scanline "game HUD" texture */
 body.tn-root::before {
-  background:
-    radial-gradient(135% 125% at 50% 36%, transparent 52%, rgba(2, 4, 10, .62) 100%),
-    linear-gradient(rgba(132, 152, 192, .032) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(132, 152, 192, .032) 1px, transparent 1px);
-  background-size: auto, 50px 50px, 50px 50px;
+  background: radial-gradient(135% 125% at 50% 36%, transparent 60%, rgba(8, 9, 11, 0.55) 100%);
 }
 
 body.tn-root::after {
-  opacity: .05;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  display: none;
 }
 
 /* --- Frosted glass surfaces with inner top-light --- */
@@ -2565,12 +2611,20 @@ body.tn-root::after {
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, .55), rgba(79, 70, 229, .5), transparent);
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(200, 16, 46, .55), rgba(242, 184, 7, .45), transparent);
+}
+
+.topbar::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(200, 16, 46, .55), rgba(242, 184, 7, .45), transparent);
 }
 
 .brand-mark {
-  box-shadow: 0 0 0 1px rgba(132, 152, 192, .16), 0 10px 30px -12px rgba(56, 189, 248, .7);
+  box-shadow: 0 0 0 1px rgba(132, 152, 192, .18), 0 6px 18px -12px rgba(0, 0, 0, .6);
 }
 
 /* --- Light-on-dark gradient typography for hero text --- */
@@ -2611,58 +2665,19 @@ body.tn-root::after {
   filter: drop-shadow(0 0 11px var(--glow));
 }
 
+/* Priority district: a calm STATIC accent outline (no blink, no neon, no radar ping) */
 .district.is-top {
-  stroke: #39ff6a;            /* neon green — pops against the crimson critical fill */
+  stroke: var(--gold);
+  stroke-width: 2.6;
+  filter: drop-shadow(0 0 3px rgba(242, 184, 7, .5));
+}
+
+/* Home district for district-level roles (collector/secretary): a calm dashed
+   steel-blue ring, distinct from the gold priority outline. */
+.district.is-home {
+  stroke: var(--cyan);
   stroke-width: 2.4;
-  animation: top-blink 1.15s ease-in-out infinite;
-}
-
-/* Blinking neon-green outline on the single top district */
-@keyframes top-blink {
-  0%, 100% { stroke: #2ee85e; stroke-width: 1.9; filter: drop-shadow(0 0 2px #39ff6a); }
-  50% { stroke: #8dff9e; stroke-width: 3.8; filter: drop-shadow(0 0 9px #39ff6a) drop-shadow(0 0 3px #39ff6a); }
-}
-
-/* --- Radar-ping beacon: marks THE highest-count district unmistakably --- */
-.map-beacon { pointer-events: none; }
-
-.beacon-core {
-  fill: #ffffff;
-  filter: drop-shadow(0 0 4px var(--glow));
-  animation: beacon-core 1.6s ease-in-out infinite;
-}
-
-.beacon-ring {
-  fill: none;
-  stroke: #ffffff;
-  stroke-width: 2.4;
-  opacity: .95;
-}
-
-.beacon-ping {
-  fill: none;
-  stroke: var(--glow);
-  stroke-width: 3;
-  opacity: .9;
-  animation: beacon-ping 2.4s cubic-bezier(.2, .6, .3, 1) infinite;
-}
-
-.beacon-ping-2 { animation-delay: 1.2s; }
-
-@keyframes beacon-ping {
-  0% { r: 10; opacity: .9; stroke-width: 3.4; }
-  100% { r: 58; opacity: 0; stroke-width: .4; }
-}
-
-@keyframes beacon-core {
-  0%, 100% { r: 6.5; }
-  50% { r: 8; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .beacon-ping, .beacon-core { animation: none; }
-  .beacon-ping { opacity: .35; }
-  .district.is-top { animation: none; stroke: #39ff6a; stroke-width: 2.8; }
+  stroke-dasharray: 6 4;
 }
 
 .svg-stage::after {
@@ -2671,7 +2686,7 @@ body.tn-root::after {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(60% 50% at 46% 44%, rgba(56, 189, 248, .07), transparent 70%);
+  background: radial-gradient(60% 50% at 46% 44%, rgba(91, 143, 199, .05), transparent 70%);
 }
 
 /* --- Status chips: jewel-tone, matched to new palette --- */
@@ -2833,7 +2848,7 @@ body.tn-root::after {
 }
 
 .login-mark {
-  box-shadow: 0 0 60px -26px rgba(56, 189, 248, .9);
+  box-shadow: none;
 }
 
 .login-form input,
@@ -2873,14 +2888,9 @@ body.tn-root::after {
    decrypt-reveal glow. All decorative; pointer-events: none.
    ============================================================ */
 
-/* CRT scanlines woven into the background grid + vignette */
+/* Institutional vignette only — CRT scanlines + HUD grid removed (game-like). */
 body.tn-root::before {
-  background:
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, .11) 0 1px, transparent 1px 3px),
-    radial-gradient(135% 125% at 50% 36%, transparent 50%, rgba(2, 4, 10, .66) 100%),
-    linear-gradient(rgba(132, 152, 192, .032) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(132, 152, 192, .032) 1px, transparent 1px);
-  background-size: 100% 3px, auto, 50px 50px, 50px 50px;
+  background: radial-gradient(135% 125% at 50% 36%, transparent 60%, rgba(8, 9, 11, 0.55) 100%);
 }
 
 /* --- Classified access bar --- */
@@ -2934,30 +2944,8 @@ body.tn-root::before {
 
 .cb-live { color: var(--green); }
 
-/* --- Radar scan sweep gliding down the map --- */
+/* --- Map stage (radar scan-sweep removed for the government build) --- */
 .svg-stage { overflow: hidden; }
-
-.svg-stage::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 30%;
-  z-index: 2;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(56, 189, 248, 0), rgba(56, 189, 248, .03) 72%, rgba(56, 189, 248, .08));
-  border-bottom: 1px solid rgba(56, 189, 248, .16);
-  mix-blend-mode: screen;
-  animation: scan-sweep 9s cubic-bezier(.55, 0, .45, 1) infinite;
-}
-
-@keyframes scan-sweep {
-  0% { transform: translateY(-110%); opacity: 0; }
-  12% { opacity: 1; }
-  88% { opacity: 1; }
-  100% { transform: translateY(360%); opacity: 0; }
-}
 
 /* --- Decrypt-reveal glow (toggled by hud.js) --- */
 .decoding {
@@ -3991,7 +3979,7 @@ body.aibrief-open { overflow: hidden; }
   background: rgba(9,14,25,.92);
   border: 1px solid rgba(125,145,180,.28);
   box-shadow: 0 10px 30px -12px rgba(0,0,0,.8);
-  font: 600 12px/1.35 'IBM Plex Sans', system-ui, sans-serif;
+  font: 600 12px/1.35 'Public Sans', system-ui, sans-serif;
   color: #e8eefb;
   white-space: nowrap;
   backdrop-filter: blur(6px);
@@ -4159,3 +4147,902 @@ body.aibrief-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .grid-intro { display: none; }
 }
+
+/* =====================================================================
+   INSTITUTIONAL LIGHT THEME  (additive override — DEFAULT)
+   Appended intentionally at EOF. Scoped under html[data-theme="silver"];
+   edits NOTHING above. Removing this block (or any non-"light" theme
+   value) restores the dark "command" theme byte-for-byte.
+   Strategy: re-map shared tokens, then explicitly flatten the handful of
+   surfaces that hardcode dark rgba()/gradients/glows and so ignore tokens.
+   ===================================================================== */
+
+/* --- Token remap (drives every rule that reads var()) --- */
+html[data-theme="silver"] {
+  /* Page canvas is a brushed silver-grey (not black); surfaces are lighter silver. */
+  --bg: #888d96;
+  --bg-2: #8e939b;
+  --text: #1b2536;
+  --muted: #56627a;
+  --faint: #75809a;
+  --line: #c3c8d0;
+  --line-2: #b2b8c1;
+  /* Status / RAG colours kept at the DARK-MODE values so the choropleth map
+     (and badges/dots) are colour-identical to dark mode. */
+  --green: #2fb37f;
+  --amber: #e0a32a;
+  --red: #e2483f;
+  /* Accent: institutional steel-blue, darkened for white */
+  --cyan: #2f6fb0;
+  --accent: #2f6fb0;
+  /* TVK accents kept; brand red darkened slightly for AA on white */
+  --brand: #b80f29;
+  --brand-2: #9e1b1b;
+  --gold: #b7860b;
+  /* Surfaces: solid white cards, neutral shadow, no glass blur */
+  --glass: #dfe2e6;
+  --glass-2: #d6d9dd;
+  --shadow-1: 0 1px 2px rgba(16, 26, 46, .05), 0 8px 24px -18px rgba(16, 26, 46, .25);
+  --shadow-2: 0 24px 60px -36px rgba(16, 26, 46, .35);
+}
+
+/* --- Page canvas: off-white, kill scanline/grid pseudo-elements ---
+   Matches the WINNING body.tn-root::before (later in source) on element
+   count and beats it on specificity, so the grid/scanlines never paint. */
+html[data-theme="silver"] body.tn-root {
+  background: linear-gradient(180deg, #8e939b 0%, #888d96 55%, #82878f 100%);
+}
+html[data-theme="silver"] body.tn-root::before,
+html[data-theme="silver"] body.tn-root::after {
+  display: none;
+  background: none;
+}
+
+/* --- Frosted-glass surfaces -> solid white cards --- */
+html[data-theme="silver"] .topbar,
+html[data-theme="silver"] .panel,
+html[data-theme="silver"] .mapwrap,
+html[data-theme="silver"] .lineage-panel,
+html[data-theme="silver"] .insights-panel {
+  background: #dfe2e6;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-1);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-theme="silver"] .card,
+html[data-theme="silver"] .tab,
+html[data-theme="silver"] .big-metric,
+html[data-theme="silver"] .tile,
+html[data-theme="silver"] .spark,
+html[data-theme="silver"] .deptrow,
+html[data-theme="silver"] .arow,
+html[data-theme="silver"] .area-card,
+html[data-theme="silver"] .district-alert-box {
+  background: #e8eaed;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-1);
+}
+
+/* Tamed selected/active tab + priority area card */
+html[data-theme="silver"] .tab.active,
+html[data-theme="silver"] .deptrow.on,
+html[data-theme="silver"] .area-card.is-top {
+  border-color: var(--brand);
+  background: #f0f1f3;
+  box-shadow: 0 0 0 1px var(--brand) inset, var(--shadow-1);
+}
+
+/* TVK flag band (red -> gold -> red) kept in silver mode — uses the theme's
+   darker brand/gold so the band stays legible on the light topbar. */
+html[data-theme="silver"] .topbar::after,
+html[data-theme="silver"] .topbar::before {
+  background: linear-gradient(90deg, var(--brand) 0%, var(--gold) 50%, var(--brand) 100%);
+  opacity: 1;
+}
+html[data-theme="silver"] .brand-mark {
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+/* --- Hero text: gradient-clip -> solid dark ink ---
+   Covers the main hero group AND .aibrief-head h2 (a separate gradient-clip
+   heading at ~3704) so the AI-brief title is not white-on-white. */
+html[data-theme="silver"] .login-card h1,
+html[data-theme="silver"] .detail-head h2,
+html[data-theme="silver"] .panel .title,
+html[data-theme="silver"] .aibrief-head h2 {
+  background: none;
+  -webkit-text-fill-color: var(--text);
+  color: var(--text);
+}
+/* "FLEXZ GOVERNANCE" wordmark keeps the TVK red -> gold -> red gradient in silver
+   mode (theme's darker gold/red so it reads on the light topbar). */
+html[data-theme="silver"] .brand h1 {
+  background: linear-gradient(90deg, var(--brand) 0%, var(--gold) 50%, var(--brand) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+html[data-theme="silver"] .brand p { color: var(--muted); }
+
+/* --- Pill / count-pill / source chip on white --- */
+html[data-theme="silver"] .pill {
+  color: var(--cyan);
+  background: #eef4fb;
+  border-color: #cfe0f1;
+}
+html[data-theme="silver"] .count-pill {
+  background: #f1f4f9;
+  border-color: var(--line);
+  color: var(--muted);
+}
+html[data-theme="silver"] .source-info {
+  color: var(--cyan);
+  background: #eef4fb;
+  border-color: #cfe0f1;
+}
+html[data-theme="silver"] .source-info:hover,
+html[data-theme="silver"] .source-info:focus-visible {
+  background: #e2eefb;
+  border-color: var(--cyan);
+}
+
+/* --- Buttons: flat, no neon glow --- */
+html[data-theme="silver"] .btn {
+  color: var(--text);
+  background: #ffffff;
+  border-color: var(--line-2);
+}
+html[data-theme="silver"] .btn:hover,
+html[data-theme="silver"] .btn:focus-visible {
+  background: #f1f5fb;
+  border-color: var(--cyan);
+}
+html[data-theme="silver"] .btn-search { color: var(--muted); background: #f6f8fc; }
+html[data-theme="silver"] .btn-search:hover,
+html[data-theme="silver"] .btn-search:focus-visible { color: var(--text); }
+html[data-theme="silver"] .search-kbd { color: var(--faint); }
+
+html[data-theme="silver"] .btn-primary {
+  border-color: var(--cyan);
+  background: var(--cyan);
+  color: #ffffff;
+  box-shadow: none;
+}
+html[data-theme="silver"] .btn-primary::after { display: none; }
+
+html[data-theme="silver"] .btn-ai {
+  color: #ffffff;
+  border-color: var(--cyan);
+  background: var(--cyan);
+  box-shadow: none;
+}
+html[data-theme="silver"] .btn-ai:hover,
+html[data-theme="silver"] .btn-ai:focus-visible {
+  background: #2a639f;
+  border-color: #2a639f;
+  background-image: none;
+}
+html[data-theme="silver"] .ai-mark {
+  color: #fff;
+  background: rgba(255, 255, 255, .18);
+  border-color: rgba(255, 255, 255, .5);
+}
+html[data-theme="silver"] .ai-mark.sm { color: var(--cyan); background: #eef4fb; border-color: #cfe0f1; }
+
+html[data-theme="silver"] .btn-logout:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* Theme-toggle button: inherits .btn; tighten spacing */
+html[data-theme="silver"] .btn-theme { gap: 8px; }
+.btn-theme { gap: 8px; min-width: 0; }
+.btn-theme .theme-ic { font-size: 15px; line-height: 1; }
+.btn-theme .theme-lbl { font-size: 12px; font-weight: 600; }
+
+/* --- Status RAG: chips & big-value tones, AA on white --- */
+html[data-theme="silver"] .badge.green {
+  color: #166534; background: #e7f6ed; border-color: #abdcbd;
+}
+html[data-theme="silver"] .badge.amber {
+  color: #92400e; background: #fdf2e3; border-color: #f0cf9a;
+}
+html[data-theme="silver"] .badge.red {
+  color: #991b1b; background: #fcebea; border-color: #f0b4b0;
+}
+html[data-theme="silver"] .card.tone-green .v { color: var(--green); }
+html[data-theme="silver"] .card.tone-amber .v { color: var(--amber); }
+html[data-theme="silver"] .card.tone-red .v   { color: var(--red); }
+
+/* --- Map: keep RAG fills (JS-driven), tidy separators/outlines --- */
+html[data-theme="silver"] .district {
+  stroke: #ffffff;
+  fill-opacity: .92;
+}
+html[data-theme="silver"] .district:hover {
+  stroke: #1b2536;
+  filter: none;
+}
+html[data-theme="silver"] .district.is-top {
+  stroke: var(--gold);
+  filter: none;
+}
+html[data-theme="silver"] .svg-stage::after { display: none; }
+
+/* --- Fusion bar / alert crawl (hardcoded dark rgba) --- */
+html[data-theme="silver"] .readiness {
+  background: #f6f8fc;
+  border-color: var(--line-2);
+  box-shadow: none;
+  color: var(--text);
+  --rl-c: var(--cyan);
+}
+html[data-theme="silver"] .rl-seg { background: #d8dfea; }
+html[data-theme="silver"] .rl-seg.on { background: #9fb0c8; }
+html[data-theme="silver"] .rl-arrow,
+html[data-theme="silver"] .rl-v { color: var(--cyan); filter: none; }
+html[data-theme="silver"] .crawl {
+  background: #ffffff;
+  border-color: var(--line);
+}
+html[data-theme="silver"] .crawl-led {
+  background: #fcebea;
+  color: var(--red);
+  border-right-color: var(--line);
+}
+html[data-theme="silver"] .crawl-item { color: var(--text); }
+html[data-theme="silver"] .crawl-sep { color: var(--faint); }
+
+/* --- Panel/card body text that HARDCODES light-gray ink for the dark
+   surfaces (#c9d6ea / #cdd8ea / #dbe6f7 / #dce8f7 / #cfdae9). On the now-white
+   surfaces these are near-invisible, so re-ink to a readable dark token.
+   (.lineage-tip / .map-tooltip keep their own intentional dark backgrounds,
+   so their light ink stays legible and is left alone.) --- */
+html[data-theme="silver"] .ai-card-title,
+html[data-theme="silver"] .ai-card-copy,
+html[data-theme="silver"] .alert-text,
+html[data-theme="silver"] .insight-row span,
+html[data-theme="silver"] .node-records,
+html[data-theme="silver"] .kpi-list li,
+html[data-theme="silver"] .oj-text,
+html[data-theme="silver"] .fb-name,
+html[data-theme="silver"] .legend .row {
+  color: var(--text);
+}
+/* Legend chip: light surface in the silver theme (base chip is dark, which would
+   leave the now-dark legend text unreadable on it). */
+html[data-theme="silver"] .legend {
+  background: #e8eaed;
+  border-color: var(--line);
+}
+/* --- Silver mode rides a DARK page canvas, so the few elements that sit on the
+   bare background (alerts ticker, footer) need treating: the ticker becomes a
+   silver surface (its text is already dark); the footer text goes light. --- */
+html[data-theme="silver"] .crawl {
+  background: #dde0e4;
+  border-color: var(--line);
+}
+html[data-theme="silver"] .foot,
+html[data-theme="silver"] .foot * {
+  color: #2a2f37;
+}
+html[data-theme="silver"] .lineage-note { color: var(--muted); }
+html[data-theme="silver"] .oj-tag {
+  color: var(--cyan);
+}
+
+/* Fusion-lens signature violet: deepen for AA contrast on white. */
+html[data-theme="silver"] .fusion-tab .tab-ic { color: #6d4bd6; background: #efeafd; }
+html[data-theme="silver"] .mapwrap.fusion-mode .map-head .ttl::after { color: #6d4bd6; }
+
+/* Watch-floor feed-rollup status chips (light green/amber ink on pale tints
+   read low-contrast on white) -> darken ink for AA. */
+html[data-theme="silver"] .feed-rollup.ok {
+  color: #166534; border-color: #abdcbd; background: #e7f6ed;
+}
+html[data-theme="silver"] .feed-rollup.warn {
+  color: #92400e; border-color: #f0cf9a; background: #fdf2e3;
+}
+
+/* --- Command palette & AI brief panels (multi-layer dark gradients) --- */
+html[data-theme="silver"] .cmdk-panel {
+  background: #ffffff;
+  border-color: var(--line-2);
+  box-shadow: var(--shadow-2);
+}
+html[data-theme="silver"] .cmdk-prompt { color: var(--cyan); }
+html[data-theme="silver"] .aibrief-panel {
+  background: #ffffff;
+  border-color: var(--line-2);
+  box-shadow: var(--shadow-2);
+}
+/* AI-brief body content: these hardcode light ink (#fff / #c9d6ea / #dbe6f7 /
+   #e7eefb) for the dark panel — re-ink dark so they stay legible on white. */
+html[data-theme="silver"] .brief-headline { color: var(--text); }
+html[data-theme="silver"] .brief-sub,
+html[data-theme="silver"] .brief-points li,
+html[data-theme="silver"] .brief-moves li { color: var(--text); }
+html[data-theme="silver"] .brief-lead {
+  border-color: #cfe0f1;
+  background: #f4f8fd;
+}
+html[data-theme="silver"] .brief-focus { background: #f6f8fc; }
+html[data-theme="silver"] .brief-focus:hover { box-shadow: var(--shadow-1); }
+html[data-theme="silver"] .brief-moves li { background: #f6f8fc; }
+html[data-theme="silver"] .aibrief-rail {
+  background: #f8fafc;
+  opacity: 1;
+}
+html[data-theme="silver"] .aibrief-close { color: var(--muted); }
+html[data-theme="silver"] .aibrief-close:hover { border-color: var(--cyan); }
+
+/* tn3d hero tooltip rides over the light map; keep it readable */
+html[data-theme="silver"] .tn3d-tip {
+  background: #ffffff;
+  border-color: var(--line-2);
+  color: var(--text);
+  box-shadow: var(--shadow-1);
+}
+html[data-theme="silver"] .tn3d-tip i { color: var(--muted); }
+
+/* --- Login surfaces & inputs --- */
+html[data-theme="silver"] .login-page::after { display: none; }
+html[data-theme="silver"] .login-mark { box-shadow: none; }
+html[data-theme="silver"] .login-form input,
+html[data-theme="silver"] .login-form select {
+  background: #ffffff;
+  border-color: var(--line-2);
+  color: var(--text);
+}
+html[data-theme="silver"] .login-form input:hover,
+html[data-theme="silver"] .login-form select:hover {
+  border-color: var(--cyan);
+}
+
+/* --- Scrollbars / selection / focus on light --- */
+html[data-theme="silver"] * {
+  scrollbar-color: #b7c1d2 transparent;
+}
+html[data-theme="silver"] *::-webkit-scrollbar-thumb {
+  background: #b7c1d2; background-clip: content-box;
+}
+html[data-theme="silver"] *::-webkit-scrollbar-thumb:hover {
+  background: #9aa7bd; background-clip: content-box;
+}
+html[data-theme="silver"] ::selection {
+  background: rgba(47, 111, 176, .22);
+  color: var(--text);
+}
+html[data-theme="silver"] :focus-visible {
+  outline-color: var(--brand);
+}
+
+/* --- AI summary card decorative glow -> subtle tint --- */
+html[data-theme="silver"] .ai-summary-card {
+  border-color: var(--line);
+  box-shadow: var(--shadow-1);
+}
+html[data-theme="silver"] .ai-summary-card::before { opacity: .14; }
+
+/* ============================================================
+   PRESSURE-TEST FIXES (post-workflow)
+   ============================================================ */
+
+/* 1. "Nothing loops forever": kill the beacon-style pulse on the priority
+      district, priority ward card, and lineage nodes — in BOTH themes. The
+      resting look (static gold outline / solid cards) is already defined. */
+/* Priority district BLINKS on the map (restored at user request) — a clear gold
+   pulse so the top district is unmistakable. Other forever-loops stay disabled. */
+.area-card.is-top { animation: none !important; }
+.lineage-node { animation: none !important; }
+.district.is-top {
+  stroke: var(--gold);
+  animation: flexz-top-blink 1.3s ease-in-out infinite !important;
+}
+@keyframes flexz-top-blink {
+  0%, 100% { stroke-width: 2.2; filter: drop-shadow(0 0 3px var(--gold)); }
+  50%      { stroke-width: 4.2; filter: drop-shadow(0 0 11px var(--gold)) drop-shadow(0 0 4px var(--gold)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .district.is-top { animation: none !important; stroke-width: 3; }
+}
+
+/* Map reverted to SVG — keep the ECharts geo overlay fully hidden so it can't
+   re-intercept the dept-tab clicks. */
+#tn-geo-map { display: none !important; }
+
+/* The department tabs (Police/Health/PDS/Combined) are absolutely positioned
+   over the bottom of the map; the SVG was stacking above them and swallowing
+   their clicks. Anchor them to .mapwrap and lift them above the map. */
+.mapwrap { position: relative; }
+.map-tabs { z-index: 15; }
+.svg-stage { z-index: 0; }
+
+/* 2. Light theme missed these hardcoded-dark surfaces (pressure-test blockers).
+      The data-lineage modal is a lead-the-demo feature and was rendering dark
+      navy nodes with re-inked dark text = invisible on the white panel. */
+html[data-theme="silver"] .lineage-node {
+  background: #ffffff;
+  border-color: var(--line);
+  box-shadow: var(--shadow-1);
+}
+html[data-theme="silver"] .node-icon {
+  background: #f1f4f9;
+  border-color: var(--line);
+}
+html[data-theme="silver"] .node-title { color: var(--text); }
+/* Map / lineage tooltips keep their dark backgrounds, so their text must stay
+   LIGHT in silver mode (var(--text) is dark here → was invisible on hover). */
+html[data-theme="silver"] .lineage-tip,
+html[data-theme="silver"] #map-tooltip { color: #e6eaf2; }
+html[data-theme="silver"] #map-tooltip .m,
+html[data-theme="silver"] .tip .m { color: #9aa6b8; }
+
+/* 3. Login screen (first impression) showed a dark navy slab on the off-white
+      canvas — flatten the frosted panel and drop the cyan logo glow in light. */
+html[data-theme="silver"] .login-stage::before,
+html[data-theme="silver"] .login-page.is-open .login-stage::before {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-1);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html[data-theme="silver"] .login-logo-trigger { filter: none; }
+html[data-theme="silver"] .login-hud .corner { border-color: var(--line); opacity: .5; }
+
+
+/* =====================================================================
+   PUBLIC SANS — self-hosted USWDS institutional typeface
+   Source: U.S. Web Design System Public Sans, repackaged as static
+   per-weight woff2 by Fontsource (@fontsource/public-sans@5.2.7).
+   LICENSE: SIL Open Font License 1.1 (NOT CC0 — Public Sans is a
+   Modified Version of Libre Franklin; the combined work is OFL-1.1).
+   Full text travels with the fonts at
+   dashboard/static/dashboard/vendor/fonts/public-sans/OFL.txt.
+   Latin-only subset; var(--font-sans) keeps a system-ui fallback.
+   Appended at EOF — additive, reversible; removing this block (and the
+   --font-sans token) restores the prior Google-hosted IBM Plex Sans.
+   ===================================================================== */
+@font-face {
+  font-family: "Public Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../vendor/fonts/public-sans/public-sans-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Public Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../vendor/fonts/public-sans/public-sans-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Public Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../vendor/fonts/public-sans/public-sans-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Public Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../vendor/fonts/public-sans/public-sans-700.woff2") format("woff2");
+}
+
+/* =====================================================================
+   ARCHIVO (headings) + IBM PLEX MONO (numerals) — self-hosted to complete
+   air-gap / offline operation (closes the pressure-test "Google Fonts CDN"
+   gap). Static per-weight woff2 from @fontsource. Archivo = OFL-1.1;
+   IBM Plex Mono = OFL-1.1. The Google Fonts <link> was removed from base.html.
+   ===================================================================== */
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../vendor/fonts/archivo/archivo-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("../vendor/fonts/archivo/archivo-800.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../vendor/fonts/ibm-plex-mono/ibm-plex-mono-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../vendor/fonts/ibm-plex-mono/ibm-plex-mono-600.woff2") format("woff2");
+}
+
+/* =====================================================================
+   TABLER IDIOMS (borrowed CSS only — MIT, github.com/tabler/tabler).
+   No Bootstrap, no framework, no assets imported. Additive + reversible:
+   restyles EXISTING components in place, reuses existing tokens, and is
+   safe in both themes (chip colours ride --green/--amber/--red which
+   already have html[data-theme="silver"] overrides). Append-only after the
+   USWDS / Public Sans block (current EOF).
+
+   NOTE re --space-*: a sibling USWDS integration already defines the
+   --space-* scale at ~line 2538 on an 8px base (8/16/24/32/40/48), and it
+   is consumed elsewhere (.card padding, etc.). We therefore DO NOT redefine
+   it here — that would silently corrupt app-wide spacing. We reuse the
+   existing rungs where the intended size matches (8→--space-1, 16→--space-2,
+   24→--space-3) and use literals for in-between values. Only namespaced
+   --tbl-* keys are introduced below; they collide with nothing.
+   ===================================================================== */
+
+:root {
+  /* Tabler-style consistent card geometry. Namespaced keys only — does NOT
+     redefine --line/--glass/--shadow-1/--space-*, so the authoritative
+     :root (~2506) and the USWDS --space-* scale (~2538) are untouched. */
+  --tbl-radius-card: 15px;
+  --tbl-radius-row: 11px;
+  --tbl-row-hairline: var(--line);
+}
+
+/* --- (a) Tabler "stat card" treatment for the summary KPI cards.
+       Big numeral + small UPPERCASE label is already the shape; Tabler tunes
+       the rhythm: tighter label tracking + a hairline above the value, with
+       tabular figures so digits don't jitter. We deliberately do NOT set
+       .v font-size here — the responsive overrides (status view ~1966, the
+       <=560px rule ~2485) keep their tuned sizes; only additive properties
+       are layered on, so no specificity fight and every view keeps its
+       intended numeral size. The .k/.v/.u markup is unchanged. --- */
+.card .k {
+  font-size: 11px;
+  letter-spacing: .08em;
+}
+.card .v {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--tbl-row-hairline);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.card .u {
+  margin-left: 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* --- (a.2) Honest "status chip" on the summary card.
+       No numeric delta exists in the data, so the real signal is card.tone
+       (green/amber/red). Turn the tone into a Tabler status chip pinned to
+       the BOTTOM-right of the card — clear of the top-right .source-info (ⓘ)
+       button that lives in .card-top — using the SAME status tokens the
+       .badge uses, so both themes inherit. Pure CSS: ::after reads tone. --- */
+.card.tone-green,
+.card.tone-amber,
+.card.tone-red { position: relative; }
+.card.tone-green::after,
+.card.tone-amber::after,
+.card.tone-red::after {
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+/* Label keyed off the existing tone class (data has no per-card delta/label;
+   if a template later sets data-tone-label, swap content to attr() — no other
+   CSS change needed). */
+.card.tone-green::after { content: "Normal"; }
+.card.tone-amber::after { content: "Watch"; }
+.card.tone-red::after   { content: "Critical"; }
+.card.tone-green::after {
+  color: var(--green);
+  border: 1px solid color-mix(in srgb, var(--green) 42%, transparent);
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+}
+.card.tone-amber::after {
+  color: var(--amber);
+  border: 1px solid color-mix(in srgb, var(--amber) 42%, transparent);
+  background: color-mix(in srgb, var(--amber) 14%, transparent);
+}
+.card.tone-red::after {
+  color: var(--red);
+  border: 1px solid color-mix(in srgb, var(--red) 42%, transparent);
+  background: color-mix(in srgb, var(--red) 14%, transparent);
+}
+/* Reserve space on the value's last line so a wide numeral can't run under
+   the bottom-right chip (~70px wide for "Critical"). */
+.card.tone-green .v,
+.card.tone-amber .v,
+.card.tone-red .v { padding-right: 78px; }
+
+/* --- (a.3) Tabler delta chip on the ONLY component with real delta data:
+       the detail-view tiles (.tile-delta already carries .over/.under/
+       .on-target from fmtDelta(), dashboard.js ~407). Promote text -> pill.
+       Colours reuse --red/--green/--muted (all have light overrides), so
+       both themes work. This OVERRIDES the prior plain-text colour rules at
+       ~841-843 (same specificity, later in source = wins). --- */
+.tile .tile-delta {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: .02em;
+  font-variant-numeric: tabular-nums;
+}
+.tile .tile-delta.over {
+  color: var(--red);
+  border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
+  background: color-mix(in srgb, var(--red) 13%, transparent);
+}
+.tile .tile-delta.under {
+  color: var(--green);
+  border: 1px solid color-mix(in srgb, var(--green) 40%, transparent);
+  background: color-mix(in srgb, var(--green) 13%, transparent);
+}
+.tile .tile-delta.on-target {
+  color: var(--muted);
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--muted) 10%, transparent);
+}
+/* Arrow glyph in front of the delta — direction matches over/under sense. */
+.tile .tile-delta.over::before  { content: "\25B2"; font-size: 7px; }
+.tile .tile-delta.under::before { content: "\25BC"; font-size: 7px; }
+
+/* --- (b) Tabler "data-table" idioms on the LIST components that read as
+       tables (alert list + dept-overview). They are <button> flex rows with
+       click handlers, NOT <table>s, so we lift the TREATMENT only: zebra
+       rows, right-aligned tabular numerics, and a clear hover row. No DOM
+       change -> the qsa(".arow"/".deptrow") click JS + the light overrides
+       stay intact. "Sticky header" is intentionally dropped (no header row
+       exists to stick). --- */
+
+/* Tighten the alert list into a table-like stack (flat rows, shared hairline,
+   zebra) framed by a single 1px outer border. */
+#alert-list.alist {
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--tbl-radius-row);
+  overflow: hidden;
+  background: transparent;
+}
+#alert-list.alist .arow {
+  border: 0;
+  border-bottom: 1px solid var(--tbl-row-hairline);
+  border-radius: 0;
+  background: transparent;
+}
+#alert-list.alist .arow:last-child { border-bottom: 0; }
+#alert-list.alist .arow:nth-child(even) {
+  background: color-mix(in srgb, var(--muted) 5%, transparent);
+}
+#alert-list.alist .arow:hover {
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
+}
+/* Right-align the numeric column, lock tabular figures so digits don't jitter. */
+#alert-list.alist .arow .av {
+  margin-left: auto;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* dept-overview rows -> same table rhythm (right-aligned tabular .val). */
+.dept-overview .deptrow .val {
+  margin-left: auto;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+.dept-overview .deptrow:hover {
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
+}
+
+/* --- (c) Consistent card radius / hairline / section header (Tabler card +
+       card-header idiom) on existing surfaces. Reuses tokens only. --- */
+.card { border-radius: var(--tbl-radius-card); }
+/* Section header band: tighten .sec-t's rhythm/tracking, keeping its existing
+   trailing-hairline rule (.sec-t::after at ~852) intact. --space-3 = 24px
+   (USWDS) top, 10px bottom (matches the prior .sec-t margin shape). */
+.sec-t {
+  margin: var(--space-3) 0 10px;
+  font-size: 10.5px;
+  letter-spacing: .12em;
+}
+
+/* --- Light-theme parity: most chips ride color-mix() over --green/--amber/
+       --red/--cyan/--muted, which are already remapped under
+       html[data-theme="silver"] (~4136+), so they recolour for free. Only the
+       zebra/hover need more contrast on solid white, and the status chip gets
+       the AA-tuned inks the codebase already uses for .badge in light. --- */
+html[data-theme="silver"] #alert-list.alist {
+  border-color: var(--line);
+}
+html[data-theme="silver"] #alert-list.alist .arow:nth-child(even) {
+  background: #f6f8fc;
+}
+html[data-theme="silver"] #alert-list.alist .arow:hover,
+html[data-theme="silver"] .dept-overview .deptrow:hover {
+  background: #eef4fb;
+}
+html[data-theme="silver"] .card.tone-green::after {
+  color: #166534; border-color: #abdcbd; background: #e7f6ed;
+}
+html[data-theme="silver"] .card.tone-amber::after {
+  color: #92400e; border-color: #f0cf9a; background: #fdf2e3;
+}
+html[data-theme="silver"] .card.tone-red::after {
+  color: #991b1b; border-color: #f0b4b0; background: #fcebea;
+}
+
+/* ============================================================
+   ECharts integration (Apache 2.0, vendored).
+   Trend chart container + GEO choropleth overlay. Append-only;
+   does not alter any existing token or selector.
+   ============================================================ */
+
+/* Trend: ECharts needs an explicitly sized box (it makes its own canvas).
+   Mirrors the old `.spark canvas` sizing + the area/district flex overrides
+   (those desktop overrides use `height:100% !important`, so we match it). */
+.spark .trend-chart {
+  display: block;
+  width: 100%;
+  height: 148px;
+  max-height: 180px;
+}
+@media (min-width: 1100px) {
+  body[data-view="district"] .spark .trend-chart,
+  body[data-view="area"] .spark .trend-chart {
+    height: 100% !important;
+    max-height: 220px;
+    flex: 1 1 auto;
+    /* Floor to prevent the ECharts collapse-to-28px bug, but low enough that the
+       chart shrinks to fit the panel's available space (dense views like PDS leave
+       little room) instead of overflowing it and being clipped by overflow:hidden. */
+    min-height: 40px;
+  }
+}
+
+/* GEO map overlay: sits over the same .svg-stage box as #tn-map.
+   The SVG stays in the DOM (fusion/playback/login-intro need it); we just
+   layer the ECharts choropleth above it for the dept (Police/Health/PDS) views. */
+.tn-geo-map {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+}
+/* The status legend (Normal/Watch/Critical key) is position:absolute with no
+   stacking context of its own; raise it above the overlay so it stays visible
+   on the dept (ECharts) view. */
+.svg-stage .legend { z-index: 3; }
+/* When fusion-center paints the shared SVG (Combined tab) or playback opens, JS
+   adds .geo-hidden so the ECharts overlay steps aside and the SVG shows through.
+   showGeoOverlay(true) calls resize() so re-show on a previously-hidden box paints. */
+.tn-geo-map.geo-hidden {
+  display: none;
+}
+/* Keep the SVG visually behind the overlay during dept views (it is wiped/idle
+   then anyway); fusion/playback re-raise it implicitly since the overlay is hidden. */
+.svg-stage > #tn-map {
+  position: relative;
+  z-index: 1;
+}
+/* Defensive only: the dormant 3D-hero `.is-3d` mode (tn-map-3d.js, not currently
+   loaded). Use visibility, not display, so ECharts keeps a measurable box and
+   never inits at 0×0. The live globe intro is a fixed full-screen overlay that
+   paints ABOVE this layer, so it needs no rule here. */
+.svg-stage.is-3d .tn-geo-map { visibility: hidden; }
+
+/* =====================================================================
+   VAULT-GREY BACKGROUND (default theme). ONLY the page background differs
+   from the dark theme — every other colour (map, RAG status, accents, cards,
+   text) is inherited unchanged. The white "institutional light" rules
+   (html[data-theme="silver"]) are intentionally orphaned: the toggle now uses
+   "grey" <-> "dark", so those 130+ rules never match. (Safe to delete later.)
+   ===================================================================== */
+html[data-theme="grey"] {
+  --bg: #25282d;
+  --bg-2: #262a32;
+  /* Grey BOXES too (was navy cards on a grey page): surfaces a step lighter
+     than the canvas so panels/cards read as grey, not blue. Token-driven, so it
+     cascades to .topbar/.panel/.mapwrap/.card/.tile/etc. */
+  --glass: rgba(61, 68, 80, .96);
+  --glass-2: rgba(52, 59, 70, .94);
+  --panel: rgba(61, 68, 80, .94);
+  --panel-2: rgba(52, 59, 70, .9);
+  --line: rgba(168, 178, 194, .16);
+  --line-2: rgba(168, 178, 194, .28);
+}
+html[data-theme="grey"] body.tn-root {
+  background: linear-gradient(180deg, #2b2f34 0%, #25282d 58%, #1f2227 100%);
+}
+/* Card inner sheen: lift cards a touch above the grey panels so boxes are clear. */
+html[data-theme="grey"] .card,
+html[data-theme="grey"] .tile,
+html[data-theme="grey"] .big-metric,
+html[data-theme="grey"] .deptrow,
+html[data-theme="grey"] .arow,
+html[data-theme="grey"] .area-card,
+html[data-theme="grey"] .spark,
+html[data-theme="grey"] .district-alert-box {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .018));
+}
+html[data-theme="grey"] body.tn-root::before {
+  background: radial-gradient(135% 125% at 50% 36%, transparent 64%, rgba(15, 17, 19, 0.45) 100%);
+}
+html[data-theme="grey"] body.tn-root::after { display: none; }
+
+/* =====================================================================
+   TVK FLAG-COLOUR ACCENTS (used more prominently, per request).
+   Red --brand (#c8102e) + gold --gold (#f2b807), evoking the TVK flag.
+   Applied in BOTH backgrounds. Functional RAG status colours are untouched.
+   ===================================================================== */
+/* Flag band along the top AND bottom edges of the command bar (red → gold → red). */
+.topbar::after,
+.topbar::before {
+  height: 2px;
+  opacity: 1;
+  background: linear-gradient(90deg, var(--brand) 0%, var(--gold) 50%, var(--brand) 100%);
+}
+/* "Live Demo" pill → TVK red, with a live yellow indicator dot. */
+.pill {
+  color: #fff;
+  background: var(--brand);
+  border-color: var(--brand);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pill::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 6px 1px rgba(242, 184, 7, .85);
+  animation: pill-live-blink 1.8s ease-in-out infinite;
+}
+@keyframes pill-live-blink {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px 1px rgba(242, 184, 7, .85); }
+  50% { opacity: .5; box-shadow: 0 0 2px 0 rgba(242, 184, 7, .3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pill::before { animation: none; }
+}
+/* Brand wordmark in the TVK flag shade (red → gold → red). */
+.brand h1 {
+  background: linear-gradient(90deg, var(--brand) 0%, var(--gold) 50%, var(--brand) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+/* Section eyebrows in gold; section titles get a TVK-red accent bar. */
+.eyebrow { color: var(--gold); }
+.sec-t { border-left: 3px solid var(--brand); padding-left: 10px; }
+/* AI Insights mark in gold; "Live Alerts" LED in TVK red. */
+.btn-ai .ai-mark { color: var(--gold); border-color: rgba(242, 184, 7, .45); }
+.crawl-led { color: var(--brand); }
+/* Active department tab: a TVK-red underline accent on top of its dept colour. */
+.dept-tab.active { box-shadow: inset 0 -3px 0 0 var(--brand); }

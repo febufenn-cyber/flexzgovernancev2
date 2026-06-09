@@ -9,7 +9,7 @@ from django.db import transaction
 
 from dashboard.models import Area, AreaMetric, DataSource, District, DistrictMetric, MetricPoint
 from dashboard.roles import DEMO_PASSWORD, ROLE_CHOICES
-from dashboard.thresholds import DEPT_CONFIG, DEPT_ORDER, rank_status
+from dashboard.thresholds import DEPT_CONFIG, DEPT_ORDER, band_info, pds_complaint_rate
 
 
 MAJOR = {
@@ -189,12 +189,37 @@ def rng_for(key):
     return random.Random(seed)
 
 
-def make_metrics(name, scale=1.0):
-    r = rng_for(name)
-    size = MAJOR.get(name, 0.34 + r.random() * 0.62) * scale
+# Declared "size" now DOMINATES count magnitude. Each count = ANCHOR * size *
+# narrow jitter (no large size-independent floor to drown it out), so a big
+# district is believably bigger than a small one (Chennai >> Perambalur on beds /
+# ration_users / FIRs). Non-MAJOR districts get a *capped* fallback size so a lucky
+# random draw can never out-rank the metros: max fallback magnitude is
+# 0.52 * 1.15 = 0.60 of anchor, below Chennai's floor of 1.0 * 0.85 = 0.85.
+# Percentages (pendency_pct, occupancy) stay size-INDEPENDENT.
+ANCHOR_FIR = 3600       # Chennai ~3.6-4k FIRs/month; small districts ~700-1100
+ANCHOR_BEDS = 4200      # Chennai ~3.5-4k government beds; small districts ~900-1400
+ANCHOR_USERS = 1750000  # Chennai ~1.5-1.8M ration users; small districts ~0.4-0.6M
+SIZE_JITTER = 0.15      # +/-15% magnitude jitter around the size term
 
-    fir_filed = round((620 + r.random() * 1750) * (0.55 + size))
-    pend_rate = 0.20 + r.random() * 0.42
+
+def _fallback_size(r):
+    """Capped size for non-MAJOR districts: [0.22, 0.52], always below the
+    metros so Chennai/Coimbatore stay the largest by magnitude."""
+    return 0.22 + r.random() * 0.30
+
+
+def make_metrics(name):
+    r = rng_for(name)
+    size = MAJOR.get(name) or _fallback_size(r)
+
+    def magnitude(anchor):
+        """Size-dominated count: anchor * size with a narrow +/-15% jitter."""
+        return round(anchor * size * r.uniform(1 - SIZE_JITTER, 1 + SIZE_JITTER))
+
+    fir_filed = magnitude(ANCHOR_FIR)
+    # Re-centred near the target (25): uniform[18%, 38%], mean ~28% -> the police
+    # spread is mostly green/amber with a red minority (was uniform[20%, 62%]).
+    pend_rate = 0.18 + r.random() * 0.20
     fir_pending = round(fir_filed * pend_rate)
     crime_spike = r.random() > 0.74
     police = {
@@ -208,8 +233,11 @@ def make_metrics(name, scale=1.0):
         police.update(POLICE_OVERRIDES[name])
         police["disposed"] = police["fir_filed"] - police["fir_pending"]
 
+    # Occupancy is the 4th RNG draw (magnitude->pend->crime->occupancy), unchanged
+    # from the original, so every district's occupancy value is byte-identical and
+    # the health RAG band distribution cannot drift.
     occupancy = round(46 + r.random() * 51)
-    beds = round((360 + r.random() * 3200) * (0.5 + size))
+    beds = magnitude(ANCHOR_BEDS)
     occupied = round(beds * occupancy / 100)
     health = {
         "occupancy": occupancy,
@@ -222,18 +250,104 @@ def make_metrics(name, scale=1.0):
         health["occupied"] = round(health["beds"] * health["occupancy"] / 100)
         health["vacant"] = health["beds"] - health["occupied"]
 
-    shops = round((300 + r.random() * 1500) * (0.5 + size))
-    users = round((190000 + r.random() * 1450000) * (0.45 + size))
+    users = magnitude(ANCHOR_USERS)
+    # Fair-price shops derive from users (~900-1800 users per shop) so the
+    # users-per-shop ratio is always believable, instead of an independent draw.
+    shops = max(1, round(users / r.uniform(900, 1800)))
     comp_spike = r.random() > 0.8
-    complaints = round((22 + r.random() * 215) * (0.5 + size))
+    # Complaints are generated from a per-100k RATE (scale-invariant), so big
+    # districts aren't auto-flagged for size: base ~8-22/100k (target 12), plus a
+    # surge bump on spike districts. complaint_rate is then derived from the pair.
+    base_rate = 8 + r.random() * 14
+    complaints = round(users / 100_000 * base_rate)
     if comp_spike:
-        complaints += round(150 + r.random() * 200)
+        complaints += round(users / 100_000 * (12 + r.random() * 16))
     pds = {
         "complaints": complaints,
         "ration_users": users,
         "ration_shops": shops,
         "complaint_surge": comp_spike,
     }
+    pds["complaint_rate"] = pds_complaint_rate(pds)
+
+    return {
+        "police": police,
+        "health": health,
+        "pds": pds,
+    }
+
+
+def _split_counts(district_code, key, total, parts=5):
+    """Deterministically PARTITION a district count total across `parts` wards.
+
+    Returns a list that sums to exactly `total` with each ward strictly < total
+    (jittered weights), so wards never out-mass their own district. Seeded per
+    (district, key) so each count partitions independently but reproducibly.
+    """
+    wr = rng_for(f"{district_code}:split:{key}")
+    weights = [0.6 + wr.random() * 0.8 for _ in range(parts)]
+    weight_sum = sum(weights)
+    shares = [round(total * w / weight_sum) for w in weights]
+    # Absorb rounding drift into the largest ward so the parts sum to `total`
+    # exactly while staying below it.
+    shares[shares.index(max(shares))] += total - sum(shares)
+    return shares
+
+
+def ward_metrics(district_code, district_payload, index):
+    """Build one ward's payload by PARTITIONING the district's count totals and
+    deriving everything scale-dependent from the ward's own share.
+
+    COUNT metrics (fir_filed, beds, ration_users) are split so the 5 wards sum to
+    ~district (each < district). PERCENTAGES (pendency_pct, occupancy) are drawn
+    independently per ward (scale-free -> plausible per-ward variation). Counts
+    derived from those (fir_pending/disposed, occupied/vacant) follow. ration_shops
+    derives from the ward's users; complaints derive from the ward's users x a
+    jittered version of the district complaint_rate (so ward complaint_rate stays
+    plausible and sums to ~district, never the runaway-rate bug at ward level).
+
+    `index` is 1..5; uses index-1 to read its slice of each partition.
+    """
+    r = rng_for(f"{district_code}-ward-{index}:metrics")
+    slot = index - 1
+    dp = district_payload
+
+    fir_filed = _split_counts(district_code, "fir_filed", dp["police"]["fir_filed"])[slot]
+    pend_rate = 0.18 + r.random() * 0.20
+    fir_pending = round(fir_filed * pend_rate)
+    crime_spike = r.random() > 0.74
+    police = {
+        "fir_filed": fir_filed,
+        "fir_pending": fir_pending,
+        "disposed": fir_filed - fir_pending,
+        "pendency_pct": round(pend_rate * 100),
+        "crime_spike": crime_spike,
+    }
+
+    beds = _split_counts(district_code, "beds", dp["health"]["beds"])[slot]
+    occupancy = round(46 + r.random() * 51)
+    occupied = round(beds * occupancy / 100)
+    health = {
+        "occupancy": occupancy,
+        "beds": beds,
+        "occupied": occupied,
+        "vacant": beds - occupied,
+    }
+
+    users = _split_counts(district_code, "ration_users", dp["pds"]["ration_users"])[slot]
+    shops = max(1, round(users / r.uniform(900, 1800)))
+    # Tie ward complaints to ward users via a jittered district rate (mean 1.0),
+    # so ward complaint_rate ~ district +/-20% and the parts sum to ~district.
+    ward_rate = dp["pds"]["complaint_rate"] * r.uniform(0.8, 1.2)
+    comp_spike = r.random() > 0.8
+    complaints = round(users / 100_000 * ward_rate)
+    pds = {
+        "complaints": complaints,
+        "ration_users": users,
+        "ration_shops": shops,
+        "complaint_surge": comp_spike,
+    }
+    pds["complaint_rate"] = pds_complaint_rate(pds)
 
     return {
         "police": police,
@@ -311,14 +425,17 @@ class Command(BaseCommand):
 
     def _create_areas_and_metrics(self):
         for district in District.objects.order_by("name"):
+            # Recompute the district payload (deterministic, == the stored district
+            # metrics) so wards PARTITION the real district totals rather than being
+            # generated independently and inflating past the district.
+            district_payload = make_metrics(district.name)
             for index in range(1, 6):
                 area = Area.objects.create(
                     district=district,
                     code=f"{district.code}-ward-{index}",
                     name=f"{district.name} \u2014 Ward {index}",
                 )
-                scale_rng = rng_for(f"{area.code}:scale")
-                area_metrics = make_metrics(area.name, scale=0.12 + scale_rng.random() * 0.28)
+                area_metrics = ward_metrics(district.code, district_payload, index)
                 for department in DEPT_ORDER:
                     payload = area_metrics[department]
                     primary_field = DEPT_CONFIG[department]["primary_field"]
@@ -331,27 +448,22 @@ class Command(BaseCommand):
                     )
 
     def _assign_statuses(self):
-        """Allocate status by value-rank within each department, so the metric's
-        magnitude alone decides Normal / Watch / Critical — identically for
-        districts and wards across Police, Health and PDS."""
-        for department in DEPT_ORDER:
-            metrics = list(
-                DistrictMetric.objects.filter(department=department)
-                .order_by("-primary_value", "district__name")
-            )
-            total = len(metrics)
-            for index, metric in enumerate(metrics):
-                metric.status = rank_status(index, total)
-            DistrictMetric.objects.bulk_update(metrics, ["status"])
-
-            area_metrics = list(
-                AreaMetric.objects.filter(department=department)
-                .order_by("-primary_value", "area__name")
-            )
-            area_total = len(area_metrics)
-            for index, metric in enumerate(area_metrics):
-                metric.status = rank_status(index, area_total)
-            AreaMetric.objects.bulk_update(area_metrics, ["status"])
+        """Allocate status from real, per-metric RAG bands tied to a target
+        (see thresholds.DEPT_THRESHOLDS) — NOT percentile rank. Police is scored
+        on FIR pendency %, Health on bed occupancy %, PDS on complaints per 100k
+        users; each band is absolute, so a unit's RAG never depends on its
+        neighbours and Police 'more FIRs = critical' is no longer the rule."""
+        for Model, name_order in (
+            (DistrictMetric, "district__name"),
+            (AreaMetric, "area__name"),
+        ):
+            for department in DEPT_ORDER:
+                metrics = list(
+                    Model.objects.filter(department=department).order_by(name_order)
+                )
+                for metric in metrics:
+                    metric.status = band_info(department, metric.payload)["status"]
+                Model.objects.bulk_update(metrics, ["status"])
 
     def _create_district_trends(self):
         top_ids = {}

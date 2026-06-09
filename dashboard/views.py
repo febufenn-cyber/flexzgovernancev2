@@ -4,7 +4,14 @@ from django.contrib.auth.views import LoginView
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
-from .roles import ROLE_CHOICES, normalize_role_username
+from .roles import (
+    ROLE_CHOICES,
+    allowed_departments,
+    normalize_role_username,
+    role_default_department,
+    role_for_user,
+    role_home_district,
+)
 from .thresholds import normalize_department
 
 
@@ -35,15 +42,23 @@ class RoleLoginView(LoginView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        self.request.session["role"] = form.cleaned_data["role"]
+        # SECURITY: the authorization role is derived from the authenticated
+        # identity, NOT from the submitted form field — a client cannot
+        # self-promote by picking a privileged role in the dropdown.
+        self.request.session["role"] = role_for_user(self.request.user)
         self.request.session["play_intro"] = True  # grid-acquisition intro, once per login
         return response
 
 
 def active_department(request):
+    allowed = allowed_departments(request)
+    if not allowed:
+        return None
     if request.GET.get("dept"):
-        return normalize_department(request.GET.get("dept"))
-    return "police"
+        dept = normalize_department(request.GET.get("dept"))
+        # Authorization layer: a scoped role can never land on a foreign department.
+        return dept if dept in allowed else allowed[0]
+    return role_default_department(request)
 
 
 def role_label(request):
@@ -52,9 +67,13 @@ def role_label(request):
 
 
 def dashboard_context(request, **extra):
+    allowed = allowed_departments(request)
     context = {
         "active_dept": active_department(request),
         "role_label": role_label(request),
+        "allowed_depts": list(allowed),
+        "allowed_depts_attr": ",".join(allowed),
+        "home_district": role_home_district(request) or "",
     }
     context.update(extra)
     return context

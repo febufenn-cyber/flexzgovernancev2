@@ -4,12 +4,15 @@
 (function () {
   "use strict";
 
-  var DEPTS = ["police", "health", "pds"];
   var DEPT_META = {
     police: { label: "Police", color: "#f5c542" },
     health: { label: "Health", color: "#f26da8" },
     pds: { label: "PDS", color: "#38bdf8" },
   };
+  // Authorization layer (client mirror): scope index + actions to allowed depts.
+  var DEPTS = (document.body.dataset.allowedDepts || "police,health,pds")
+    .split(",").map(function (d) { return d.trim(); })
+    .filter(function (d) { return DEPT_META[d]; });
   var STATUS = {
     green: { label: "Normal", color: "#22d39b", rank: 0 },
     amber: { label: "Watch", color: "#f5b12a", rank: 1 },
@@ -34,18 +37,22 @@
   var lastFocus = null;
 
   function actions() {
-    return [
+    var base = [
       { type: "action", label: "Open AI Insights", hint: "live brief + watch floor", icon: "⚡",
         run: function () { clickHook("[data-aibrief-trigger]"); } },
       { type: "action", label: "Open Data Lineage", hint: "where the numbers come from", icon: "🔗",
         run: function () { clickHook("[data-lineage-trigger]"); } },
-      { type: "dept", label: "Switch to Police", hint: "Law & Order", icon: "P", color: DEPT_META.police.color,
-        run: function () { go("/?dept=police"); } },
-      { type: "dept", label: "Switch to Health", hint: "Hospital Occupancy", icon: "H", color: DEPT_META.health.color,
-        run: function () { go("/?dept=health"); } },
-      { type: "dept", label: "Switch to PDS", hint: "Public Distribution", icon: "D", color: DEPT_META.pds.color,
-        run: function () { go("/?dept=pds"); } },
     ];
+    var deptActions = {
+      police: { type: "dept", label: "Switch to Police", hint: "Law & Order", icon: "P", color: DEPT_META.police.color,
+        run: function () { go("/?dept=police"); } },
+      health: { type: "dept", label: "Switch to Health", hint: "Hospital Occupancy", icon: "H", color: DEPT_META.health.color,
+        run: function () { go("/?dept=health"); } },
+      pds: { type: "dept", label: "Switch to PDS", hint: "Public Distribution", icon: "D", color: DEPT_META.pds.color,
+        run: function () { go("/?dept=pds"); } },
+    };
+    DEPTS.forEach(function (d) { if (deptActions[d]) base.push(deptActions[d]); });
+    return base;
   }
 
   function clickHook(sel) {

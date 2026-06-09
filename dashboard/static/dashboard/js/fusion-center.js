@@ -8,12 +8,16 @@
   var reduce = window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  var DEPTS = ["police", "health", "pds"];
   var DEPT_META = {
     police: { label: "Police", color: "#f5c542" },
     health: { label: "Health", color: "#f26da8" },
     pds: { label: "PDS", color: "#38bdf8" },
   };
+  // Authorization layer (client mirror): scope every fusion fetch to the role's
+  // allowed departments so single-dept ministers don't hang on missing feeds.
+  var DEPTS = (document.body.dataset.allowedDepts || "police,health,pds")
+    .split(",").map(function (d) { return d.trim(); })
+    .filter(function (d) { return DEPT_META[d]; });
   var STATUS = {
     green: { label: "Normal", color: "#22d39b" },
     amber: { label: "Watch", color: "#f5b12a" },
@@ -387,7 +391,7 @@
   }
 
   function renderBriefAll() {
-    if (state.feeds && state.feeds.length >= 3) {
+    if (state.feeds && state.feeds.length >= DEPTS.length) {
       renderAIBrief(state.feeds, state.lineage || {});
     }
   }
@@ -547,7 +551,7 @@
 
   function enterFusion() {
     var doIt = function () {
-      if (!state.feeds || state.feeds.length < 3) { loadFeeds(); window.setTimeout(enterFusion, 400); return; }
+      if (!state.feeds || state.feeds.length < DEPTS.length) { loadFeeds(); window.setTimeout(enterFusion, 400); return; }
       fusionActive = true;
       document.querySelectorAll(".dept-tab").forEach(function (t) { t.classList.remove("active"); });
       var ft = el(".fusion-tab"); if (ft) ft.classList.add("active");
@@ -570,9 +574,10 @@
   }
 
   function bindFusion() {
-    var ft = el(".fusion-tab");
-    if (ft) ft.addEventListener("click", function () { enterFusion(); });
+    // Delegated (robust to init-order / re-render) so the Combined tab is
+    // always clickable, matching the dept-tab fix in dashboard.js.
     document.addEventListener("click", function (e) {
+      if (e.target.closest(".fusion-tab")) { enterFusion(); return; }
       if (e.target.closest(".dept-tab")) exitFusionVisual();
     });
   }
@@ -685,7 +690,7 @@
         pbPlay();
       });
     };
-    if (!state.feeds || state.feeds.length < 3) { loadFeeds(); window.setTimeout(go, 600); } else go();
+    if (!state.feeds || state.feeds.length < DEPTS.length) { loadFeeds(); window.setTimeout(go, 600); } else go();
   }
   function closePlayback() {
     pbStop();

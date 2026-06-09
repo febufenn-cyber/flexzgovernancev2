@@ -21,12 +21,12 @@
       aria-controls="login-card"
       aria-expanded="{% if form.errors %}true{% else %}false{% endif %}"
     >
-      <img class="login-mark" src="{% static 'dashboard/img/flexz-governance-logo.png' %}" alt="Flexz Governance logo">
+      <img class="login-mark" src="{% static 'dashboard/img/flexz-ai-logo.png' %}?v=20260609-flexzai" alt="flexz.ai — One intelligent space">
     </button>
 
     <section class="login-card" id="login-card"{% if not form.errors %} aria-hidden="true" inert{% endif %}>
-      <h1>Tamil Nadu Governance Grid</h1>
-      <p>Integrated Real-Time Command Centre</p>
+      <h1>Flexz Governance</h1>
+      <p>Tamil Nadu Governance Grid · Integrated Command Centre</p>
 
       <form method="post" class="login-form">
         {% csrf_token %}
